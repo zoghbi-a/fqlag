@@ -181,5 +181,4 @@ class FqLagBin(FqLagBase):
         self.I_s = I_s
         self.I_c = I_c
 
-
     
