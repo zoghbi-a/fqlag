@@ -119,7 +119,7 @@ class FqLagBin(FqLagBase):
     
     def __init__(self, tarr, yarr, yerr, fql, dt=None):
         self.fql  = np.array(fql)
-        self.fq   = (self.fql[1:] + self.fql[:-1])/2
+        self.fq   = np.exp((np.log(self.fql[1:])+np.log(self.fql[:-1]))/2.0)
         self.nfq  = len(self.fq)
         self.dt   = dt
         super(FqLagBin, self).__init__(tarr, yarr, yerr)

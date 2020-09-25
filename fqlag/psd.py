@@ -4,20 +4,22 @@ from .base import FqLagBin
 
 class Psd(FqLagBin):
     
-    def __init__(self, tarr, yarr, yerr, fql, dt=None):
+    def __init__(self, tarr, yarr, yerr, fql, dt=None, log=False):
         super(Psd, self).__init__(tarr, yarr, yerr, fql, dt)
         self.norm = self.mu**2
+        self.islog = log
 
 
     def covariance(self, pars):
-        psd  = np.array(pars)
+        psd  = np.exp(pars) if self.islog else np.array(pars)
         psd *= self.norm 
 
         res = np.sum(psd * self.I_s, -1)
         return res
 
     def covariance_derivative(self, pars):
-        return self.I_s.T * self.norm
+        psd  = np.exp(pars) if self.islog else np.array(pars)*0 + 1
+        return (psd * self.I_s).T * self.norm
 
 
 class lPsd(FqLagBin):
