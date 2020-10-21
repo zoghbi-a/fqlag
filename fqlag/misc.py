@@ -150,6 +150,53 @@ def maximize(mod, p0, limits=None, ipfix=None, verbose=1):
 
     res = opt.minimize(f, p0[ivar], args=(mod, info), method='BFGS', tol=1e-4, jac=fprime, 
                 options={'gtol':1e-4})
+    if verbose: 
+        print('%10.6g | %s | %s\r'%(-res.fun, 
+                ' '.join(['%10.3g'%xx for xx in res.x]), '%10.3g'%np.max(np.abs(res.jac))), end="")
+        print('\n** done **\n')
+
+    p, pe = res.x, np.diag(res.hess_inv)**0.5
+    y, ye = np.zeros(npar, np.double), np.zeros(npar, np.double)
+    y[ipfix] = pfix
+    y[ivar ] = p
+    ye[ivar] = pe 
+    y = np.array([np.clip(xx, l[0], l[1]) for xx,l in zip(y,limits)])
+
+    return y, ye, res
+
+
+def maximize_no_grad(mod, p0, limits=None, ipfix=None, verbose=1):
+
+    if limits is None:
+        limits = [[-30,30] for x in p0]
+
+    if ipfix is None:
+        ipfix = []
+    npar = len(p0)
+    pfix = np.array([p0[i] for i in ipfix])
+    ivar = [i for i in range(npar) if not i in ipfix]
+    info = [npar, pfix, ipfix, ivar]
+
+    def f(x, mod, info):
+        npar, pfix, ipfix, ivar = info
+        x = np.array([np.clip(xx, l[0], l[1]) for xx,l in zip(x,limits)])
+        y = np.zeros(npar, np.double)
+        y[ipfix] = pfix
+        y[ivar ] = x
+        #y = np.array([np.clip(xx, l[0], l[1]) for xx,l in zip(y,limits)])
+
+        try:
+            l = mod.loglikelihood(y)
+        except np.linalg.LinAlgError:
+            l = -1e2
+        
+        print('%10.6g | %s \r'%(l, ' '.join(['%10.3g'%xx for xx in x])), end="")
+        
+        return -l
+
+
+    res = opt.minimize(f, p0[ivar], args=(mod, info), method='BFGS', tol=1e-4, 
+                options={'gtol':1e-4})
     if verbose: print('\n** done **\n')
 
     p, pe = res.x, np.diag(res.hess_inv)**0.5
@@ -177,13 +224,13 @@ def step_par(mod, p0, par1, par2=None, **kwargs):
     
     ip1 = par1[0] 
     step = []
-    for p1 in par1[1]:
+    for iip1,p1 in enumerate(par1[1]):
         p = np.array(pbest)
         p[ip1] = p1
         if not par2 is None:
             ip2 = par2[0] 
             step2 = []
-            for p2 in par2[1]:
+            for iip2,p2 in enumerate(par2[1]):
                 pp = np.array(p)
                 pp[ip2] = p2
                 res = maximize(mod, pp, limits, ipfix=[ip1, ip2], verbose=False)
