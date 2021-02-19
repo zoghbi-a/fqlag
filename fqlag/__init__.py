@@ -1,5 +1,5 @@
 
-from .psd import Psd, lPsd
+from .psd import Psd
 from .psdf import Psdf
 from .cxd import Cxd, lCxd, CxdRI, lPsi, Psi
 from .pcxd import PCxd, lPCxd, PPsi, lPPsi

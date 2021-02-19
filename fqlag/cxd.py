@@ -1,6 +1,6 @@
 import numpy as np
 from .base import FqLagBin
-from .psd import Psd, lPsd
+from .psd import Psd
 
 
 class Cxd(FqLagBin):

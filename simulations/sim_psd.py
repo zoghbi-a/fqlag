@@ -384,7 +384,7 @@ def psd_13(**kwargs):
 if __name__ == '__main__':
     
     parser  = ARG.ArgumentParser(
-        description="Run simulations for the LCurve functionality",            
+        description="Run simulations for the PSD calculation",            
         formatter_class=ARG.ArgumentDefaultsHelpFormatter) 
 
 

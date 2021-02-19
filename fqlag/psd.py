@@ -16,7 +16,7 @@ class Psd(FqLagBin):
             in the count rate or flux.
         fql: a numpy array of frequency bin boundaries
         dt: sampling time of the light curves. If given, corrections to sampling
-        bias is applied, otherwise, we don't apply it.
+            bias is applied, otherwise, we don't apply it.
         log: if True, the model parameters are the log of the psd values,
             otherwise, model the psd values.
 
@@ -76,24 +76,4 @@ class Psd(FqLagBin):
         psd  = np.exp(pars) if self.islog else np.array(pars)*0 + 1
         return (psd * self.I_s).T * self.norm
 
-
-
-class lPsd(FqLagBin):
-    
-    def __init__(self, tarr, yarr, yerr, fql, dt=None):
-        super(lPsd, self).__init__(tarr, yarr, yerr, fql, dt)
-        self.norm = self.mu**2
-    
-    def covariance(self, pars):
-        psd  = np.exp(pars)
-        psd *= self.norm
-                
-        res = np.sum(psd * self.I_s, -1)
-        return res
-
-    def covariance_derivative(self, pars):
-        psd = np.exp(pars)
-        psd *= self.norm
-        
-        return (psd * self.I_s).T
 
