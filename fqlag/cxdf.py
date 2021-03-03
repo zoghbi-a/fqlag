@@ -3,7 +3,7 @@ from .base import FqLagBin
 from .psdf import Psdf, identify_model
 
 class Psif(FqLagBin):
-    
+    """THIS HAS NOT BEEN TESTED"""
     def __init__(self, tarr, yarr, yerr, fql, p1, model=['pl', 'c', 'c'], dt=None, NFQ=8):
         self.NFQ = NFQ
         fqL      = np.logspace(np.log10(fql[0]), np.log10(fql[1]), NFQ)

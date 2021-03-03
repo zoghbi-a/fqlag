@@ -7,7 +7,18 @@ import scipy.stats as st
 def check_grad(mod, p0, dx=1e-3):
     """Compare the gradient from mod.loglikelihood_derivative
     against numerical derivative.
+
+    Tests that the derivatie codes are correct
+
+    Args:
+        mod: the model we are testing
+        p0: parameters of the model
+        dx: used for the numerical derivative
+
+    Returns:
+        logLikelihood, grad_array_analytic, grad_array_numerical
     """
+
     p0 = np.array(p0)
     l,g,h = mod.loglikelihood_derivative(p0)
     
@@ -24,40 +35,32 @@ def check_grad(mod, p0, dx=1e-3):
     return l, g, g0
 
 
-def maximize_old(mod, p0, limits=None):
-
-    if limits is None:
-        limits = [[-30,30] for x in p0]
-
-    def f(x, mod):
-        #x = np.clip(x, -30, 30)
-        x = np.array([np.clip(xx, l[0], l[1]) for xx,l in zip(x,limits)])
-        try:
-            l = mod.loglikelihood(x)
-        except np.linalg.LinAlgError:
-            l = -1e2
-        return -l
-
-    def fprime(x, mod):
-        #x = np.clip(x, -30, 30)
-        x = np.array([np.clip(xx, l[0], l[1]) for xx,l in zip(x,limits)])
-        try:
-            l, g = mod.loglikelihood_derivative(x, calc_fisher=False)
-        except np.linalg.LinAlgError:
-            l = -1e6
-            g = x*0 - 1e5
-        print('%10.6g | %s | %s\r'%(l, 
-                ' '.join(['%10.3g'%xx for xx in x]), ' '.join(['%10.3g'%xx for xx in g])), end="")
-        return -g
-
-    res = opt.minimize(f, p0, args=(mod), method='BFGS', tol=1e-4, jac=fprime, 
-                options={'gtol':1e-4})
-    print('\n** done **\n')
-    p, pe = res.x, np.diag(res.hess_inv)**0.5
-    return p, pe, res
-
-
 def run_mcmc(mod, p0, perr=None, nwalkers=-10, nrun=100, **kwargs):
+    """Run MCMC to estimate the Posterior distributions of the parameters
+
+    This uses the emcee package.
+
+    Args:
+        mod: the model object for calulating the likelihood function
+        p0: starting paramters for chain
+        perr: estimated uncertainties on the parameters. They are used to 
+            initialize the chains. If not given, the chain is started with 
+            values within 10% of p0
+        nwalkers: number of walkers in the chains (see emcee for details)
+        nrun: number of chain runs
+
+    Keywords:
+        sigma_f: the factor that multiples perr used to initialize the 
+            walkers. Default: 0.5
+        limits: a list of [pmin, pmax] values for the limits on the parameters.
+            These are effectively used as uniform priors on the parameters
+        iphi: The indicies of the phase parameters within p0. Used to ensure
+            that those parameters are cyclic and remain -pi < phi < pi
+
+    Returns:
+        the chain array where the walker axis is flattened.
+
+    """
 
     sigma_f = kwargs.get('sigma_f', 0.5)
     limits  = kwargs.get('limits', None)
@@ -102,6 +105,27 @@ def run_mcmc(mod, p0, perr=None, nwalkers=-10, nrun=100, **kwargs):
         
 
 def maximize(mod, p0, limits=None, ipfix=None, verbose=1):
+    """Maixmize the likelihood of model mod
+    
+    Use numerical optimization from scipy.optimize.minimize to estimate
+    the parameters of the model at the likelihood maximum
+    We the BFGS algorithm.
+
+    Args:
+        mod: model whose likelihood is to be optimized
+        p0: starting model parameters
+        limits: a list of [pmin, pmax] values for the limits on the parameters.
+            These are effectively used as uniform priors on the parameters.
+            None means all parameters are assumed to be between [-30, 30]
+        ipfix: parameter indices of p0 to keep fixed during the maximization.
+            Useful when calculating uncertainties by stepping through them.
+        verbose: if True, print progress
+    
+    Returns: 
+        return (pars_best, pars_best_error, fit_result) 
+            the latter is from scipy.optimize.minimize
+
+    """
 
     if limits is None:
         limits = [[-30,30] for x in p0]
@@ -113,6 +137,7 @@ def maximize(mod, p0, limits=None, ipfix=None, verbose=1):
     ivar = [i for i in range(npar) if not i in ipfix]
     info = [npar, pfix, ipfix, ivar]
 
+    # main negative log-likelihood function #
     def f(x, mod, info):
         npar, pfix, ipfix, ivar = info
         x = np.array([np.clip(xx, l[0], l[1]) for xx,l in zip(x,limits)])
@@ -127,13 +152,13 @@ def maximize(mod, p0, limits=None, ipfix=None, verbose=1):
             l = -1e2
         return -l
 
+    # first derivative of the negative log-likelihood
     def fprime(x, mod, info):
         npar, pfix, ipfix, ivar = info
         x = np.array([np.clip(xx, l[0], l[1]) for xx,l in zip(x,limits)])
         y = np.zeros(npar, np.double)
         y[ipfix] = pfix
         y[ivar ] = x
-        #y = np.array([np.clip(xx, l[0], l[1]) for xx,l in zip(y,limits)])
 
         try:
             l, g = mod.loglikelihood_derivative(y, calc_fisher=False)
@@ -166,6 +191,11 @@ def maximize(mod, p0, limits=None, ipfix=None, verbose=1):
 
 
 def maximize_no_grad(mod, p0, limits=None, ipfix=None, verbose=1):
+    """Maximize the log-likelihood when an anlytical derivative isn't available
+
+    See @maximize for details
+
+    """
 
     if limits is None:
         limits = [[-30,30] for x in p0]
@@ -210,8 +240,31 @@ def maximize_no_grad(mod, p0, limits=None, ipfix=None, verbose=1):
 
 
 def step_par(mod, p0, par1, par2=None, **kwargs):
-    """
-    par1: [ip, p_array]
+    """Step a parameter thorugh an array and record the change in the
+    likelihood function, fitting other parameters each time.
+
+    It can be used to calculate the uncertainties of some parameters
+
+    Args:
+        mod: model whose likelihood is to be optimized
+        p0: starting model parameters
+        par1: [ipar, p_array], where ipar is the index of the parameter
+            in p0 to step through, and p_array is the array of parameters
+            to use
+        par1: similar to par1 to do two parameters. Default is None, so we 
+            only do one parameter
+
+    Keywords;
+        verbose: if True, print progress
+        limits: a list of [pmin, pmax] values for the limits on the parameters.
+            to be passed to @maximize
+    
+    Returns: 
+        step, [pbest, pbest_e, lbest] where:
+        step: (n, 2) array with parameter value and loglikelihood
+        pbest, pbest_e, lbest: parameter list, errors and the best loglikelihood
+            values. 
+    
     """
     
     verbose = kwargs.get('verbose', True)
@@ -247,25 +300,71 @@ def step_par(mod, p0, par1, par2=None, **kwargs):
     return step, [pbest, pbest_e, lbest]
   
     
+def errors(mod, p0, ipars=None, **kwargs):
+    """Calculate the uncertainties in the parameters p0 that maximize
+    the likelihood function of a model mod.
 
-def errors(mod, p0, limits=None, ipars=None, **kwargs):
+    For each parameter, the value is changed in small steps until the log-likelihood
+    changes by DCHI2 (default is 1, to calculated the 1-sigma uncertainties)
 
+    Args:
+        mod: model whose log-likelihood can called as mod.loglikelihood
+        p0: the model parameters that maximize the likelihood, obtained 
+            for example by running @misc.maximize
+        ipars: a list of indices of p0 for which the errors are to be calculated
+            Default: None, means calculate errors for all parameters
+
+
+    Keywords:
+        limits: a list of [pmin, pmax] values for the limits on the parameters.
+            to be passed to @maximize
+        tol: tolerance in loglikelihood value. e.g. calculation stop when
+            |Delta(loglikelihood) - DCHI2| < tol. Default: 1e-2
+        DCHI2: the change in loglikelihood value to probe. DCHI2=1 gives ~1-sigma
+            uncertainties. For 90% confidence for instance, use DCHI2=2.71.
+        skip_ipars: Parameter indices to skip in calculating the errors. Usefull
+            for example in combination with ipars=None above.
+        sign: the direction of the parameter uncertainty search. Default:1 means
+            increase the parameter until Delta(loglikelihood)=DCHI2. -1 means seach
+            in the other direction. Doing one direction assumes gaussian uncertainties.
+            If the assumption breaks, both both +1 and -1 uncertainties should be reported.
+        verbose: True to print progress
+
+
+    """
+    # limits on the parameters; act like uniform priors 
+    limits  = kwargs.get('limits', None)
+
+    # tolerance #
     tol     = kwargs.get('tol', 1e-2)
-    sign    = kwargs.get('sign', 1)
-    verbose = kwargs.get('verbose', True)
+
+    # a measure of the confidence level in the uncertainty.
     DCHI2   = kwargs.get('DCHI2', 1.0)
+
+    # parameter indices to skip
     skip_ipars = kwargs.get('skip_ipars', [])
 
+    # direction search for uncertainties.
+    sign    = kwargs.get('sign', 1)
+
+    # printing progress? 
+    verbose = kwargs.get('verbose', True)
+    
+    
+    # do all parameters if ipars=None
     npar = len(p0)
     if ipars is None:
         ipars = list(range(npar))
+
     ipars = [i for i in ipars]
 
+    # make sure we start the search from parameters that maximize the likelihood
     pbest, pbest_e, res = maximize(mod, np.array(p0)+1e-3, limits)
     lbest = -res.fun
 
+    # loop through the parameters. If a new maximum is found, 
+    # restart the whole search
     p, pe = np.array(pbest), np.array(pbest_e)
-
     for iipar, ipar in enumerate(ipars):
         
         if iipar in skip_ipars:
@@ -292,7 +391,7 @@ def errors(mod, p0, limits=None, ipars=None, **kwargs):
             isig += 0.5
             if isig >= 10:
                 Warning(('parameter %d appears to be unbound using sign=%d\n'
-                         'Try using sign=%d')%(ipar, sign, sign))
+                         'Try using sign=%d')%(ipar, sign, -sign))
                 pbest_e[ipar] = np.abs(pExtrm - pbest[ipar])
                 not_bound = True
                 break
