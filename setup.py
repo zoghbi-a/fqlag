@@ -9,7 +9,7 @@ setup(
   author = 'Abdu Zoghbi',
   author_email = 'astrozoghbi@gmail.com',
   url = 'https://github.com/zoghbi-a/fqlag',
-  download_url = 'https://github.com/zoghbi-a/fqlag/archive/master.zip',
+  download_url = 'https://github.com/zoghbi-a/fqlag/archive/v0.1.tar.gz',
   keywords = ['Astronomy', 'Time-Series', 'Delays'],
   install_requires=[ 
           'scipy',
