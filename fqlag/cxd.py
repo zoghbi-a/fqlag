@@ -309,7 +309,7 @@ class Psi(FqLagBin):
 
 
 class CxdRI(FqLagBin):
-    """Use real and imaginary parts; THIS HAS NOT BEEN PROPERLY TESTED"""
+    """Use real and imaginary parts; THIS HAS NOT BEEN TESTED"""
     
     def __init__(self, tarr, yarr, yerr, fql, p1, p2, dt=None):
         t  = np.concatenate(tarr)

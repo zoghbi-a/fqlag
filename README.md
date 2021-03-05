@@ -8,6 +8,12 @@ Both libraries implement the method presented in Zoghbi et. al. (2013) paper ([A
 - pip install fqlag
 - OR [Download](https://github.com/zoghbi-a/fqlag/archive/master.zip)  and add the directory `fqlag/flag` to PYTHONPATH or put it somewhere where python can find it.
 
+
+## Getting Started
+- Check out the [Getting Started](tutorials/getting_started.ipynb) notebook, which can be browsed [here](tutorials/getting_started.md).
+- There are additional example in the [`tutorials/test.py`](tutorials/test.py) file.
+
+
 ## Cite
 Please cite the following paper when using the code.
 

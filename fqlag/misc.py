@@ -104,7 +104,7 @@ def run_mcmc(mod, p0, perr=None, nwalkers=-10, nrun=100, **kwargs):
     return chain
         
 
-def maximize(mod, p0, limits=None, ipfix=None, verbose=1):
+def maximize(mod, p0, limits=None, ipfix=None, verbose=1, useGrad=False):
     """Maixmize the likelihood of model mod
     
     Use numerical optimization from scipy.optimize.minimize to estimate
@@ -120,6 +120,8 @@ def maximize(mod, p0, limits=None, ipfix=None, verbose=1):
         ipfix: parameter indices of p0 to keep fixed during the maximization.
             Useful when calculating uncertainties by stepping through them.
         verbose: if True, print progress
+        useGrad: use analytical gradient. This may give ~10% speedup, but it can be
+            unstable for complex problems.
     
     Returns: 
         return (pars_best, pars_best_error, fit_result) 
@@ -149,7 +151,11 @@ def maximize(mod, p0, limits=None, ipfix=None, verbose=1):
         try:
             l = mod.loglikelihood(y)
         except np.linalg.LinAlgError:
-            l = -1e2
+            l = -1e6
+
+        if verbose and not useGrad:
+            print('%10.6g | %s \r'%(l, ' '.join(['%10.3g'%xx for xx in x])), end="")
+
         return -l
 
     # first derivative of the negative log-likelihood
@@ -165,7 +171,7 @@ def maximize(mod, p0, limits=None, ipfix=None, verbose=1):
             g = g[ivar]
         except np.linalg.LinAlgError:
             l = -1e6
-            g = x*0 - 1e5
+            g = x*0 - 1e6
         if verbose:
             #print('%10.6g | %s | %s\r'%(l, 
             #    ' '.join(['%10.3g'%xx for xx in x]), ' '.join(['%10.3g'%xx for xx in g])), end="")
@@ -173,61 +179,16 @@ def maximize(mod, p0, limits=None, ipfix=None, verbose=1):
                 ' '.join(['%10.3g'%xx for xx in x]), '%10.3g'%np.max(np.abs(g))), end="")
         return -g
 
+    if not useGrad:
+        fprime = None
     res = opt.minimize(f, p0[ivar], args=(mod, info), method='BFGS', tol=1e-4, jac=fprime, 
                 options={'gtol':1e-4})
+
+    # last print 
     if verbose: 
         print('%10.6g | %s | %s\r'%(-res.fun, 
                 ' '.join(['%10.3g'%xx for xx in res.x]), '%10.3g'%np.max(np.abs(res.jac))), end="")
         print('\n** done **\n')
-
-    p, pe = res.x, np.diag(res.hess_inv)**0.5
-    y, ye = np.zeros(npar, np.double), np.zeros(npar, np.double)
-    y[ipfix] = pfix
-    y[ivar ] = p
-    ye[ivar] = pe 
-    y = np.array([np.clip(xx, l[0], l[1]) for xx,l in zip(y,limits)])
-
-    return y, ye, res
-
-
-def maximize_no_grad(mod, p0, limits=None, ipfix=None, verbose=1):
-    """Maximize the log-likelihood when an anlytical derivative isn't available
-
-    See @maximize for details
-
-    """
-
-    if limits is None:
-        limits = [[-30,30] for x in p0]
-
-    if ipfix is None:
-        ipfix = []
-    npar = len(p0)
-    pfix = np.array([p0[i] for i in ipfix])
-    ivar = [i for i in range(npar) if not i in ipfix]
-    info = [npar, pfix, ipfix, ivar]
-
-    def f(x, mod, info):
-        npar, pfix, ipfix, ivar = info
-        x = np.array([np.clip(xx, l[0], l[1]) for xx,l in zip(x,limits)])
-        y = np.zeros(npar, np.double)
-        y[ipfix] = pfix
-        y[ivar ] = x
-        #y = np.array([np.clip(xx, l[0], l[1]) for xx,l in zip(y,limits)])
-
-        try:
-            l = mod.loglikelihood(y)
-        except np.linalg.LinAlgError:
-            l = -1e2
-        
-        print('%10.6g | %s \r'%(l, ' '.join(['%10.3g'%xx for xx in x])), end="")
-        
-        return -l
-
-
-    res = opt.minimize(f, p0[ivar], args=(mod, info), method='BFGS', tol=1e-4, 
-                options={'gtol':1e-4})
-    if verbose: print('\n** done **\n')
 
     p, pe = res.x, np.diag(res.hess_inv)**0.5
     y, ye = np.zeros(npar, np.double), np.zeros(npar, np.double)

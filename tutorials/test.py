@@ -12,14 +12,14 @@ from fqlag.misc import check_grad
 
 
 
-def simulate_lc(n, dt, mu, lag, seed=3343, bkp=None):
+def simulate_lc(n, dt, mu, lag, seed=3343, bkp=None, phase=True):
     np.random.seed(seed)
     sim = az.SimLC(32)
     if bkp is None: bkp = [1e-4, -1, -2, 5e-2]
     sim.add_model('broken_powerlaw', bkp)
     sim.add_model('constant', lag, lag=True)
     sim.simulate(n*3, dt, mu, 'rms')
-    sim.apply_lag(phase=True)
+    sim.apply_lag(phase=phase)
     tarr, rarr, sarr = sim.t[:n], sim.x[:n], sim.y[:n]
     #plt.plot(tarr, rarr, tarr, sarr)
     rarr = np.random.poisson(rarr)
