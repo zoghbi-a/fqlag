@@ -10,7 +10,7 @@ Both libraries implement the method presented in Zoghbi et. al. (2013) paper ([A
 
 
 ## Getting Started
-- Check out the [Getting Started](tutorials/getting_started.ipynb) notebook, which can be browsed [here](tutorials/getting_started.md).
+- Check out the [Getting Started](tutorials/getting-started.ipynb) notebook, which can be browsed [here](tutorials/getting-started.md).
 - There are additional example in the [`tutorials/test.py`](tutorials/test.py) file.
 
 
