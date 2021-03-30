@@ -2,14 +2,14 @@ from distutils.core import setup
 setup(
   name = 'fqlag', 
   packages = ['fqlag'],
-  version = '0.2',
+  version = '0.3',
   license='MIT',
   description = ('Calculating Periodogram and Time delays in the frequency domain '
                 'from unevenly-sample time series'),
   author = 'Abdu Zoghbi',
   author_email = 'astrozoghbi@gmail.com',
   url = 'https://github.com/zoghbi-a/fqlag',
-  download_url = 'https://github.com/zoghbi-a/fqlag/archive/v0.2.tar.gz',
+  download_url = 'https://github.com/zoghbi-a/fqlag/archive/v0.3.tar.gz',
   keywords = ['Astronomy', 'Time-Series', 'Delays'],
   install_requires=[ 
           'scipy',
