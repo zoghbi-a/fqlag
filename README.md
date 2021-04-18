@@ -19,7 +19,7 @@ Please cite the following paper when using the code.
 
 ```
 @ARTICLE{2013ApJ...777...24Z,
-       author = {{Zoghbi}, A. and {Reynolds}, C. and {Cackett}, E.~M.},
+       author = {Zoghbi, A. and Reynolds, C. and Cackett, E.~M.},
         title = "{Calculating Time Lags from Unevenly Sampled Light Curves}",
       journal = {\apj},
      keywords = {black hole physics, galaxies: active, galaxies: nuclei, methods: data analysis, Astrophysics - High Energy Astrophysical Phenomena},
