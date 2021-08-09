@@ -320,7 +320,7 @@ def errors(mod, p0, ipars=None, **kwargs):
     ipars = [i for i in ipars]
 
     # make sure we start the search from parameters that maximize the likelihood
-    pbest, pbest_e, res = maximize(mod, np.array(p0)+1e-3, limits)
+    pbest, pbest_e, res = maximize(mod, np.array(p0), limits)
     lbest = -res.fun
 
     # loop through the parameters. If a new maximum is found, 
@@ -348,7 +348,7 @@ def errors(mod, p0, ipars=None, **kwargs):
                     print('%10.6g | %s \r'%(-tmp_res[2].fun, 
                         ' '.join(['%10.3g'%xx for xx in tmp_res[0]])), end="")
                 #ipars = ipars[iipar:] + ipars[:iipar]
-                return errors(mod, tmp_res[0], limits, ipars, **kwargs)
+                return errors(mod, tmp_res[0], ipars, **kwargs)
             isig += 0.5
             if isig >= 10:
                 Warning(('parameter %d appears to be unbound using sign=%d\n'
