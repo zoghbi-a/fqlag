@@ -275,6 +275,71 @@ class FqLagBase:
         return y
         
 
+    def conditional_predict(self, pars, tarrNew, modArgs, sample=None, **kwargs):
+        """Predict the values at times tnew give the parameter pars
+
+        From page 16 in Rasmussen & C. K. I. Williams:
+            Gaussian Processes for Machine Learning. See
+            also Zu, Kochanek, Peterson 2011
+
+        Args:
+            pars: parameters of the model as a numpy array
+            tarrNew: np.ndarray of times where the predictions are to be made
+            *modArgs: a dict of all arguments other than tarr, rarr, rerr, 
+                used to create the  current model. e.g. {'fql':fql, 'dt':dt} etc.
+            sample: if not None, gives the number of random samples to be generated
+                that correspond to new times tarrNew
+
+        Keywords:
+            seed: random seed in case sample is not None
+        
+        Returns:
+            if sample is None:
+                (rarrNew, rerrNew): Light curve estimates rarrNew and their uncertainties 
+                rerrNew at the times tarrNew
+            else:
+                (rarrNew, rerrNew, samples), giving additionally randomly generated samples
+
+        """
+        seed = kwargs.get('seed', None)
+        np.random.seed(seed)
+
+        n_d = self.n
+        mu  = self.mu
+
+        # augmented arrays 
+        tAug = np.concatenate((self.tarr, tarrNew))
+        rAug = np.zeros_like(tAug) + mu
+        # the error is not needed here.
+        newMod = type(self)(tAug, rAug, rAug, **modArgs)
+
+
+        # calculate the covariance matrix and inverse of the data #
+        C    = self.covariance(pars)
+        chol = alg.cho_factor(C + np.diag(self.sig2), lower=False)
+        Ci   = alg.cho_solve(chol, np.identity(n_d))
+        Ciy  = np.dot(Ci, self.yarr)
+
+        # covariance of the new model
+        S     = newMod.covariance(pars)
+        S_sd  = S[:n_d, n_d:].T
+        S_ss  = S[n_d:, n_d:]
+
+        # new values and their uncertainties
+        rarrNew = np.dot(S_sd, Ciy) + mu
+        ycov = S_ss - np.dot(np.dot(S_sd, Ci), S_sd.T)
+        rerrNew = np.sqrt(np.diag(ycov))
+
+
+        # generate the random variates if requested #
+        if not sample is None:
+            sample  = np.int(sample)
+            samples = np.random.multivariate_normal(rarrNew, ycov, size=sample)
+            return rarrNew, rerrNew, samples
+        
+        return rarrNew, rerrNew
+
+
 class FqLagBin(FqLagBase):
     """A base class for all models that fit bins in the frequency-domain.
 
