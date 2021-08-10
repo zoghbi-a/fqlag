@@ -375,7 +375,7 @@ def errors(mod, p0, ipars=None, **kwargs):
                     print('%10.6g | %s \r'%(-tmp_res[2].fun, 
                         ' '.join(['%10.3g'%xx for xx in tmp_res[0]])), end="")
                 #ipars = np.concatenate([ipars[iipar:], ipars[:iipar]])
-                return errors(mod, tmp_res[0], limits, ipars, **kwargs)
+                return errors(mod, tmp_res[0], ipars, **kwargs)
             if verbose:
                 print(' %10.6g %10.6g %10.6g %10.6g %10.6g\r'%(
                     lbest, -tmp_res[2].fun, p[ipar], pHalf, dchi2), end="")
