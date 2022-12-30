@@ -1,4 +1,5 @@
 import numpy as np
+from functools import partial
 from .base import FqLagBin
 
 ## --- Functions that can fit to the PSD --- ##
@@ -8,80 +9,107 @@ from .base import FqLagBin
 ## to Psdf below
 
 # ---- powerlaw ---- #
-# pars: norm, indx
-def pfunc__pl(f, p):
-    a, b = np.exp(p[0]), p[1]
+# pars: (log)norm, indx
+def pfunc__pl(f, p, log=True):
+    a, b = p[:2]
+    if log:
+        a = np.exp(a)
     return a * f**b   
 
-def pderv__pl(f, p):
-    return pfunc__pl(f, p) * np.array([f*0+1., np.log(f)])
+def pderv__pl(f, p, log=True):
+    a, b = p[:2]
+    fac = a
+    if log:
+        a = np.exp(a)
+        fac = 1.0
+    return pfunc__pl(f, p, log) * np.array([f*0+1./fac, np.log(f)])
 
-    
 # ---- const ---- #
-# pars: const
-pfunc__c = lambda f,p: f*0+p[0]
-pderv__c = lambda f,p: np.array([f*0+1])
+# pars: (log)const
+def pfunc__c(f, p, log=True):
+    a = p[0]
+    if log:
+        a = np.exp(a)
+    return a + f*0
 
-
-# ---- log-constant ---- #
-# pars: log-psd
-pfunc__logc = lambda f,p: f*0+np.exp(p[0])
-pderv__logc = lambda f,p: np.array([pfunc__expc(f,p)])
-
+def pderv__c(f, p, log=True):
+    a = p[0]
+    fac = a
+    if log:
+        a = np.exp(a)
+        fac = 1.0
+    return pfunc__c(f, p, log) * np.array([f*0+1./fac])
 
 # ---- bending powerlaw ---- #
-# pars: norm, index, break
-def pfunc__bpl(f, p):
-    a, b, c = np.exp(p[0]), p[1], np.exp(p[2])
+# pars: (log)norm, index, break
+def pfunc__bpl(f, p, log=True):
+    a, b, c = p[0], p[1], np.exp(p[2])
+    if log:
+        a = np.exp(a)
     return (a/f) * 1./(1 + (f/c)**(-b-1))
 
-def pderv__bpl(f, p):
-    a, b, c = np.exp(p[0]), p[1], np.exp(p[2])
+def pderv__bpl(f, p, log=True):
+    a, b, c = p[0], p[1], np.exp(p[2])
+    fac = a
+    if log:
+        a = np.exp(a)
+        fac = 1.0
     foc = f/c
     return np.array([
-        pfunc__bpl(f, p), 
+        pfunc__bpl(f, p, log) / fac, 
         a*foc**(-1-b) * np.log(foc) / (f*(1+foc**(-1-b))**2), 
         ((-1-b)*a/c * (foc)**(-2-b)) / (1+foc**(-1-b))**2
     ])
 
-
 # ---- Lorentzian ---- #
-# pars: norm, fq_cent, fq_sigma
-def pfunc__lor(f, p):
-    a, b, c = np.exp(p[:3])
+# pars: (log)norm, fq_cent, fq_sigma
+def pfunc__lor(f, p, log=True):
+    a, b, c = p[0], np.exp(p[1]), np.exp(p[2])
+    if log:
+        a = np.exp(a)
     return a * (c/(2*np.pi)) / ( (f-b)**2 + (c/2)**2 )
 
-def pderv__lor(f, p):
-    a, b, c = np.exp(p[:3])
+def pderv__lor(f, p, log=True):
+    a, b, c = p[0], np.exp(p[1]), np.exp(p[2])
+    fac = a
+    if log:
+        a = np.exp(a)
+        fac = 1.0
     return np.array([
-        pfunc__lor(f, p), 
+        pfunc__lor(f, p, log) / fac, 
         a*b*c*(f-b)/(np.pi*((-b+f)**2+(c*c/4))**2),
         (-a*c**3/(4*np.pi*((-b+f)**2+(c*c/4))**2) +
             a*c/(2*np.pi*((-b+f)**2+(c*c/4))) )
     ])
 
-
 # ---- zero-centered Lorentzian ---- #
-# pars: norm, fq_sigma
-def pfunc__lor0(f, p):
-    a, c = np.exp(p[:2])
+# pars: (log)norm, fq_sigma
+def pfunc__lor0(f, p, log=True):
+    a, c = p[0], np.exp(p[1])
+    if log:
+        a = np.exp(a)
     return a * (c/(2*np.pi)) / ( f**2 + (c/2)**2 )
 
 def pderv__lor0(f, p):
-    a, c = np.exp(p[:3])
+    a, c = p[0], np.exp(p[1])
+    fac = a
+    if log:
+        a = np.exp(a)
+        fac = 1.
     return np.array([
-        pfunc__lor0(f, p), 
+        pfunc__lor0(f, p, log) / fac, 
         (-a*c**3/(4*np.pi*((f**2)+(c*c/4))**2) +
         a*c/(2*np.pi*((f**2)+(c*c/4))) )
     ])
 
-def identify_model(model):
+
+
+def identify_model(model, log=True):
     """Identify which built-in model is to be used.
 
     The models are:
     - pl: powerlaw with parameters: (log)norm, index
     - c: constant with parameter: const
-    - logc: a constant in log-units with parameters: const(log) 
     - 'bpl': bending powerlaw with parameters: 
             (log)norm, index, (log)bend_fre
     - 'lor': lorentzian with parameters: 
@@ -92,6 +120,7 @@ def identify_model(model):
     Args:
         model: A string for the name of the model
             or a sum of models. e.g: pl or pl+bpl
+        log: The model is based on the log of the norm or not
 
     Returns:
         (pfunc, pderv, npar) where `pfunc` is a python method 
@@ -104,12 +133,11 @@ def identify_model(model):
     # a create a list of built-in model names
     # with their defining function/derivative 
     models = {}
-    models['pl'] = [pfunc__pl, pderv__pl, 2] 
-    models['c'] = [pfunc__c, pderv__c, 1]
-    models['logc'] = [pfunc__logc, pderv__logc, 1]
-    models['bpl'] = [pfunc__bpl, pderv__bpl, 3]
-    models['lor'] = [pfunc__lor, pderv__lor, 3]
-    models['lor0'] = [pfunc__lor0, pderv__lor0, 2]
+    models['pl']   = [partial(pfunc__pl, log=log),   partial(pderv__pl, log=log), 2]
+    models['c']    = [partial(pfunc__c, log=log),    partial(pderv__c, log=log), 1]
+    models['bpl']  = [partial(pfunc__bpl, log=log),  partial(pderv__bpl, log=log), 3]
+    models['lor']  = [partial(pfunc__lor, log=log),  partial(pderv__lor, log=log), 3]
+    models['lor0'] = [partial(pfunc__lor0, log=log), partial(pderv__lor0, log=log), 2]    
     
 
     ## -- work out the model -- ##
@@ -162,26 +190,28 @@ class Psdf(FqLagBin):
             contains
         model: string of a built-in model. See @identify_model function for 
             a list of built-in functions.
+        log: Fit for the log of the normalization if True, otherwise fit for the linear.
         dt: sampling time of the light curves. If given, corrections to sampling
             bias is applied, otherwise, we don't apply it.
         NFQ: The number of bins in the frequency grid used in the calculations.
             This is the 'resolution' of the model.
     """
     
-    def __init__(self, tarr, yarr, yerr, fql, model='pl', dt=None, NFQ=8):
+    def __init__(self, tarr, yarr, yerr, fql, model='pl', log=True, dt=None, NFQ=8):
         # Define the frequency grid and initialize parent class
         self.NFQ = NFQ
         fqL      = np.logspace(np.log10(fql[0]), np.log10(fql[1]), NFQ)
         self.fq  = (fqL[1:] + fqL[:-1]) / 2.
         self.fqL = np.array(fqL)
         
-        super(Psdf, self).__init__(tarr, yarr, yerr, fqL, dt)
+        super().__init__(tarr, yarr, yerr, fqL, dt)
         self.norm = self.mu**2
         
         
-        pfunc, pderv, npar = identify_model(model)
+        pfunc, pderv, npar = identify_model(model, log)
         self.psd_func = pfunc
         self.psd_derv = pderv
+        self.params = dict(fql=fql, model=model, log=log, dt=dt, NFQ=NFQ)
 
 
     def covariance(self, pars):

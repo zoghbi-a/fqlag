@@ -10,11 +10,12 @@ class PCxd(FqLagBin):
         y  = np.concatenate([x-x.mean() for x in yarr])
         ye = np.concatenate(yerr)
         self.n1 = len(tarr[0])
-        super(PCxd, self).__init__(t, y, ye, fql, dt)
+        super().__init__(t, y, ye, fql, dt)
         self.norm1 = np.mean(yarr[0])**2
         self.norm2 = np.mean(yarr[1])**2
         self.norm  = (self.norm1*self.norm2)**0.5
         self.islog = log
+        self.params = dict(fql=fql, dt=dt, log=log)
 
         
     def covariance(self, pars):
@@ -77,10 +78,11 @@ class lPCxd(FqLagBin):
         y  = np.concatenate([x-x.mean() for x in yarr])
         ye = np.concatenate(yerr)
         self.n1 = len(tarr[0])
-        super(lPCxd, self).__init__(t, y, ye, fql, dt)
+        super().__init__(t, y, ye, fql, dt)
         self.norm1 = np.mean(yarr[0])**2
         self.norm2 = np.mean(yarr[1])**2
         self.norm  = (self.norm1*self.norm2)**0.5
+        self.params = dict(fql=fql, dt=dt)
 
         
     def covariance(self, pars):
@@ -140,11 +142,12 @@ class PPsi(FqLagBin):
         y  = np.concatenate([x-x.mean() for x in yarr])
         ye = np.concatenate(yerr)
         self.n1 = len(tarr[0])
-        super(PPsi, self).__init__(t, y, ye, fql, dt)
+        super().__init__(t, y, ye, fql, dt)
         self.norm1 = np.mean(yarr[0])**2
         self.norm2 = np.mean(yarr[1])**2
         self.norm  = (self.norm1*self.norm2)**0.5
         self.islog = log
+        self.params = dict(fql=fql, dt=dt, log=log)
 
         
     def covariance(self, pars):
@@ -228,10 +231,11 @@ class lPPsi(FqLagBin):
         y  = np.concatenate([x-x.mean() for x in yarr])
         ye = np.concatenate(yerr)
         self.n1 = len(tarr[0])
-        super(lPPsi, self).__init__(t, y, ye, fql, dt)
+        super().__init__(t, y, ye, fql, dt)
         self.norm1 = np.mean(yarr[0])**2
         self.norm2 = np.mean(yarr[1])**2
         self.norm  = (self.norm1*self.norm2)**0.5
+        self.params = dict(fql=fql, dt=dt)
 
         
     def covariance(self, pars):

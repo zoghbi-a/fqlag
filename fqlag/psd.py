@@ -24,11 +24,12 @@ class Psd(FqLagBin):
     
     def __init__(self, tarr, yarr, yerr, fql, dt=None, log=False):
         # initialize the parent class #
-        super(Psd, self).__init__(tarr, yarr, yerr, fql, dt)
+        super().__init__(tarr, yarr, yerr, fql, dt)
         # set the norm; this ensures the psd values returned are normalized
         # according to the rms normalization (e.g. Vaughan et al. 2003)
         self.norm = self.mu**2
         self.islog = log
+        self.params = dict(fql=fql, dt=dt, log=log)
 
 
     def covariance(self, pars):

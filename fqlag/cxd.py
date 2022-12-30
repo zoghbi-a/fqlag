@@ -37,7 +37,7 @@ class Cxd(FqLagBin):
         ye = np.concatenate(yerr)
         self.n1 = len(tarr[0])
         # initialize the parent class #
-        super(Cxd, self).__init__(t, y, ye, fql, dt)
+        super().__init__(t, y, ye, fql, dt)
         
         # constant part of covariance #
         nfq = len(fql) - 1
@@ -51,6 +51,7 @@ class Cxd(FqLagBin):
 
         self.norm = pm1.mu * pm2.mu
         self.islog = log
+        self.params = dict(fql=fql, p1=p1, p2=p2, dt=dt, log=log)
 
         
     def covariance(self, pars):
@@ -176,7 +177,7 @@ class Psi(FqLagBin):
         y  = np.concatenate([x-x.mean() for x in yarr])
         ye = np.concatenate(yerr)
         self.n1 = len(tarr[0])
-        super(Psi, self).__init__(t, y, ye, fql, dt)
+        super().__init__(t, y, ye, fql, dt)
         self.norm1 = np.mean(yarr[0])**2
         self.norm2 = np.mean(yarr[1])**2
         self.norm  = (self.norm1*self.norm2)**0.5
@@ -188,6 +189,7 @@ class Psi(FqLagBin):
         self.psd   = np.exp(p1) if log else np.array(p1)
         self.res_1 = pm.covariance(p1)
         self.d_res_1 = np.zeros((2, self.n1, self.n1, nfq), np.double)
+        self.params = dict(fql=fql, p1=p1, dt=dt, log=log)
 
         
     def covariance(self, pars):
@@ -316,7 +318,7 @@ class CxdRI(FqLagBin):
         y  = np.concatenate([x-x.mean() for x in yarr])
         ye = np.concatenate(yerr)
         self.n1 = len(tarr[0])
-        super(CxdRI, self).__init__(t, y, ye, fql, dt)
+        super().__init__(t, y, ye, fql, dt)
         
         # constant part of covariance #
         nfq = len(fql) - 1
@@ -329,6 +331,7 @@ class CxdRI(FqLagBin):
         self.d_res_2 = np.zeros((2, self.n-self.n1, self.n-self.n1, nfq), np.double)
 
         self.norm = pm1.mu * pm2.mu
+        self.params = dict(fql=fql, p1=p1, p2=p2, dt=dt)
 
         
     def covariance(self, pars):

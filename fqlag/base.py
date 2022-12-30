@@ -58,6 +58,7 @@ class FqLagBase:
         self.tmat = tarr - np.expand_dims(tarr, 1)
         self.yyT  = self.yarr * np.expand_dims(self.yarr, 1)
         self.likelihood_vars = None
+        self.params = {}
         
     
     def covariance(self, pars):
@@ -275,7 +276,7 @@ class FqLagBase:
         return y
         
 
-    def conditional_predict(self, pars, tarrNew, modArgs, sample=None, **kwargs):
+    def conditional_predict(self, pars, tarrNew, sample=None, **kwargs):
         """Predict the values at times tnew give the parameter pars
 
         From page 16 in Rasmussen & C. K. I. Williams:
@@ -285,8 +286,6 @@ class FqLagBase:
         Args:
             pars: parameters of the model as a numpy array
             tarrNew: np.ndarray of times where the predictions are to be made
-            *modArgs: a dict of all arguments other than tarr, rarr, rerr, 
-                used to create the  current model. e.g. {'fql':fql, 'dt':dt} etc.
             sample: if not None, gives the number of random samples to be generated
                 that correspond to new times tarrNew
 
@@ -311,7 +310,7 @@ class FqLagBase:
         tAug = np.concatenate((self.tarr, tarrNew))
         rAug = np.zeros_like(tAug) + mu
         # the error is not needed here.
-        newMod = type(self)(tAug, rAug, rAug, **modArgs)
+        newMod = type(self)(tAug, rAug, rAug, **self.params)
 
 
         # calculate the covariance matrix and inverse of the data #
@@ -378,11 +377,12 @@ class FqLagBin(FqLagBase):
         self.fq   = np.exp((np.log(self.fql[1:])+np.log(self.fql[:-1]))/2.0)
         self.nfq  = len(self.fq)
         self.dt   = dt
-        super(FqLagBin, self).__init__(tarr, yarr, yerr)
+        super().__init__(tarr, yarr, yerr)
         if dt is None:
             self.calculate_integrals()
         else:
             self.calculate_integrals_aliasCorr()
+        self.params = dict(fql=fql, dt=dt)
         
 
     def calculate_integrals(self):

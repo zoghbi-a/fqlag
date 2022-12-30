@@ -15,7 +15,7 @@ class Psif(FqLagBin):
         ye = np.concatenate(yerr)
         self.n1 = len(tarr[0])
         
-        super(Psif, self).__init__(t, y, ye, fqL, dt)
+        super().__init__(t, y, ye, fqL, dt)
         self.norm1 = np.mean(yarr[0])**2
         self.norm2 = np.mean(yarr[1])**2
         self.norm  = (self.norm1*self.norm2)**0.5
@@ -30,6 +30,7 @@ class Psif(FqLagBin):
         self.psd     = pm.psd_func(self.fq, p1) # unnormalized
         self.res_1   = pm.covariance(p1)
         self.d_res_1 = np.zeros((self.npar, self.n1, self.n1), np.double)
+        self.params  = dict(fql=fql, p1=p1, model=model, dt=dt, NFQ=NFQ)
 
 
     def covariance(self, pars):
@@ -118,7 +119,7 @@ class PPsif(FqLagBin):
         ye = np.concatenate(yerr)
         self.n1 = len(tarr[0])
         
-        super(PPsif, self).__init__(t, y, ye, fqL, dt)
+        super().__init__(t, y, ye, fqL, dt)
         self.norm1 = np.mean(yarr[0])**2
         self.norm2 = np.mean(yarr[1])**2
         self.norm  = (self.norm1*self.norm2)**0.5
@@ -128,6 +129,7 @@ class PPsif(FqLagBin):
         self.psi_func, self.psi_derv, self.psi_npar = identify_model(model[1])
         self.phi_func, self.phi_derv, self.phi_npar = identify_model(model[2])
         self.npar   = self.psd_npar + self.psi_npar + self.phi_npar
+        self.params = dict(fql=fql, model=model, dt=dt, NFQ=NFQ)
         
 
 
