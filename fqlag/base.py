@@ -2,6 +2,7 @@
 import numpy as np
 import scipy.linalg as alg
 import scipy.special as sp
+import scipy.stats as st
 
 
 class FqLagBase:
@@ -59,6 +60,7 @@ class FqLagBase:
         self.yyT  = self.yarr * np.expand_dims(self.yarr, 1)
         self.likelihood_vars = None
         self.params = {}
+        self.priors = None
         
     
     def covariance(self, pars):
@@ -148,6 +150,11 @@ class FqLagBase:
         logDet = 2 * np.sum(np.log(np.diag(chol[0])))
         chi2 = np.dot(self.yarr, alg.cho_solve(chol, self.yarr))
         logLike = -0.5 * ( chi2 + logDet + self.n*np.log(2*np.pi) )
+        
+        # add priors:
+        if self.priors is not None:
+            for ip,pr in self.priors.items():
+                logLike += pr.logpdf(pars[ip])
 
         # simple caching, in case we call the derivative with the same pars #
         self.likelihood_vars = [np.array(pars), cov, chol, logLike]
@@ -254,6 +261,22 @@ class FqLagBase:
         
         return logLike, grad, hess
 
+    def add_prior(self, ipar, prior):
+        """Add a prior on a parameter
+        
+        Args:
+            ipar: parameter number for which to apply the prior (0 based)
+            prior: an instance st._distn_infrastructure.rv_continuous_frozen 
+                that defines the probability distribution for the prior.
+                for example: scipy.stats.norm(loc, scale) etc.
+        
+        """
+        
+        if not isinstance(prior, st._distn_infrastructure.rv_continuous_frozen):
+            raise ValueError(('prior has to be instance of '
+                              'scipt.stats._distn_infrastructure.rv_continuous_frozen'))
+        self.priors = {ipar:prior}
+        
     
     def sample(self, pars, size=1):
         """Generate random light curves given covariance parameters pars
