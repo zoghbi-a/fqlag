@@ -191,13 +191,15 @@ class Psdf(FqLagBin):
         model: string of a built-in model. See @identify_model function for 
             a list of built-in functions.
         log: Fit for the log of the normalization if True, otherwise fit for the linear.
+        sigma: if True, also fit for additionaly variance (log-sigma), which is the last
+            parameter in the parameter list
         dt: sampling time of the light curves. If given, corrections to sampling
             bias is applied, otherwise, we don't apply it.
         NFQ: The number of bins in the frequency grid used in the calculations.
             This is the 'resolution' of the model.
     """
     
-    def __init__(self, tarr, yarr, yerr, fql, model='pl', log=True, dt=None, NFQ=8):
+    def __init__(self, tarr, yarr, yerr, fql, model='pl', log=True, sigma=False, dt=None, NFQ=8):
         # Define the frequency grid and initialize parent class
         self.NFQ = NFQ
         fqL      = np.logspace(np.log10(fql[0]), np.log10(fql[1]), NFQ)
@@ -212,6 +214,8 @@ class Psdf(FqLagBin):
         self.psd_func = pfunc
         self.psd_derv = pderv
         self.params = dict(fql=fql, model=model, log=log, dt=dt, NFQ=NFQ)
+        self.npar   = npar
+        self.sigma  = sigma
 
 
     def covariance(self, pars):
@@ -233,10 +237,13 @@ class Psdf(FqLagBin):
 
         """
         # calculate the psd and normlize it
-        psd  = self.psd_func(self.fq, pars)
+        psd  = self.psd_func(self.fq, pars[:self.npar])
         psd *= self.norm
 
-        return np.sum(psd * self.I_s, -1)
+        cov = np.sum(psd * self.I_s, -1)
+        if self.sigma:
+            cov[np.diag_indices(self.n)] += np.exp(pars[-1])
+        return cov
 
     def covariance_derivative(self, pars):
         """First Derivative of the covariance kernel function 
@@ -251,9 +258,14 @@ class Psdf(FqLagBin):
 
         Returns:
             a matrix of first derivatives with shape (npar, self.n, self.n)"""
-        psdD  = self.psd_derv(self.fq, pars)
+        psdD  = self.psd_derv(self.fq, pars[:self.npar])
         psdD *= self.norm
-        return np.sum(self.I_s * psdD[:,None,None,:], -1)
+        
+        dcov = np.sum(self.I_s * psdD[:,None,None,:], -1)
+        if self.sigma:
+            dcov[np.diag_indices(self.n)] += np.exp(pars[-1])
+            dov = np.concatenate([dcov,np.expand_dims(np.diag(np.repeat(np.exp(pars[-1]), self.n)), 0)])
+        return dcov
 
 
     
