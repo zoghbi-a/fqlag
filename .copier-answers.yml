@@ -1,0 +1,9 @@
+# Changes here will be overwritten by Copier
+_commit: v1.4.1
+_src_path: gh:lincc-frameworks/python-project-template
+author_email: astrozoghbi@gmail.com
+author_name: Abdu Zoghbi
+custom_install: false
+package_name: fqlag
+project_license: MIT
+project_name: fqlag

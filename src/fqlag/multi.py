@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class multiFqLagBin:
     """A class for fitting multiple light curves simultaneously
 

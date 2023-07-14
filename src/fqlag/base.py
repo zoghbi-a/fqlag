@@ -12,18 +12,15 @@ class FqLagBase:
     Calculations of covariances and likelihood functions is done here
     so we don't have to repeat it for psd and lag subcalsses.
 
-    Args:
-        tarr: a numpy array giving the time axis of the light curve.
-        yarr: a numpy array giving the count rate or flux
-        yerr: a numpy array giving the 1-sigma measurement uncertainity
-            in the count rate or flux.
-
-    Returns:
-        Nothing
-
-    Raises:
-        ValueError if:
-            - array shapes do not match
+    Parameters
+    ----------
+    tarr: np.ndarray
+        a numpy array giving the time axis of the light curve.
+    yarr: np.ndarray
+        a numpy array giving the count rate or flux
+    yerr: np.ndarray
+        a numpy array giving the 1-sigma measurement uncertainity
+        in the count rate or flux.
 
     """
     

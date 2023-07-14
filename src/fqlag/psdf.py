@@ -1,5 +1,7 @@
-import numpy as np
 from functools import partial
+
+import numpy as np
+
 from .base import FqLagBin
 
 ## --- Functions that can fit to the PSD --- ##

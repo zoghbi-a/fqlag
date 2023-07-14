@@ -1,7 +1,7 @@
 import numpy as np
-from scipy.misc import derivative
 import scipy.optimize as opt
 import scipy.stats as st
+from scipy.misc import derivative
 
 
 def check_grad(mod, p0, dx=1e-3):

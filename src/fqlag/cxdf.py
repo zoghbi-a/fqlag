@@ -1,6 +1,8 @@
 import numpy as np
+
 from .base import FqLagBin
 from .psdf import Psdf, identify_model
+
 
 class Psif(FqLagBin):
     """THIS HAS NOT BEEN TESTED"""
