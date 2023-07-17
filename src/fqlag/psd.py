@@ -32,7 +32,13 @@ class Psd(FqLagBin):
 
     """
 
-    def __init__(self, tarr, yarr, yerr, fql, dt=None, log=False):
+    def __init__(self,
+                 tarr: np.ndarray,
+                 yarr: np.ndarray,
+                 yerr: np.ndarray,
+                 fql: np.ndarray,
+                 dt: float = None,
+                 log: bool = False):
         # initialize the parent class #
         super().__init__(tarr, yarr, yerr, fql, dt)
         # set the norm; this ensures the psd values returned are normalized
@@ -42,7 +48,7 @@ class Psd(FqLagBin):
         self.params = {'fql':fql, 'dt':dt, 'log':log}
 
 
-    def covariance(self, pars):
+    def covariance(self, pars: np.ndarray):
         """Covariance kernel function for modeling the power spectrum.
         
         The model parameters are the psd values with rms normalization at 
@@ -72,7 +78,7 @@ class Psd(FqLagBin):
         return res
 
 
-    def covariance_derivative(self, pars):
+    def covariance_derivative(self, pars: np.ndarray):
         """First Derivative of the covariance kernel function 
         for modeling the power spectrum.
 
