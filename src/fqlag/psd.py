@@ -1,3 +1,5 @@
+"""Class for piece-wise frequency-dependent power spectra"""
+
 import numpy as np
 
 from .base import FqLagBin
@@ -10,27 +12,34 @@ class Psd(FqLagBin):
     This class defines the covariance kernel, and the calculations are done
     in FqLagBin that Psd inherits from.
 
-    Args:
-        tarr: a numpy array giving the time axis of the light curve.
-        yarr: a numpy array giving the count rate or flux
-        yerr: a numpy array giving the 1-sigma measurement uncertainity
-            in the count rate or flux.
-        fql: a numpy array of frequency bin boundaries
-        dt: sampling time of the light curves. If given, corrections to sampling
-            bias is applied, otherwise, we don't apply it.
-        log: if True, the model parameters are the log of the psd values,
-            otherwise, model the psd values.
+    Parameters
+    ----------
+    tarr: np.ndarray
+        a numpy array giving the time axis of the light curve.
+    yarr: np.ndarray
+        a numpy array giving the count rate or flux
+    yerr: np.ndarray
+        a numpy array giving the 1-sigma measurement uncertainity
+        in the count rate or flux.
+    fql: np.ndarray
+        a numpy array of frequency bin boundaries
+    dt: float
+        sampling time of the light curves. If given, corrections to sampling
+        bias is applied, otherwise, we don't apply it.
+    log: bool
+        if True, the model parameters are the log of the psd values,
+        otherwise, model the psd values.
 
     """
-    
+
     def __init__(self, tarr, yarr, yerr, fql, dt=None, log=False):
         # initialize the parent class #
         super().__init__(tarr, yarr, yerr, fql, dt)
         # set the norm; this ensures the psd values returned are normalized
         # according to the rms normalization (e.g. Vaughan et al. 2003)
-        self.norm = self.mu**2
+        self.norm = self.mean**2
         self.islog = log
-        self.params = dict(fql=fql, dt=dt, log=log)
+        self.params = {'fql':fql, 'dt':dt, 'log':log}
 
 
     def covariance(self, pars):
@@ -45,16 +54,19 @@ class Psd(FqLagBin):
         and I_s is the Fourier integral defined in FqLagBin
         
         
-        Args:
-            pars: parameters that defined the covariance kernel.
+        Parameters
+        ----------
+        pars: np.ndarray
+            parameters that define the covariance kernel.
 
-        Returns:
-            A covariance matrix of shape: (self.n, self.n)
+        Returns
+        -------
+        A covariance matrix of shape: (self.npoints, self.npoints)
 
         """
         # get normalized psd values #
         psd  = np.exp(pars) if self.islog else np.array(pars)
-        psd *= self.norm 
+        psd *= self.norm
 
         res = np.sum(psd * self.I_s, -1)
         return res
@@ -68,14 +80,15 @@ class Psd(FqLagBin):
         to each model parameter
         
 
-        Args:
-            pars: parameters of the covariance kernel.
+        Parameters
+        ----------
+        pars: np.ndarray
+            parameters that define the covariance kernel.
 
-        Returns:
-            a matrix of first derivatives with shape (npar, self.n, self.n)
+        Returns
+        -------
+        a matrix of first derivatives with shape (npar, self.npoints, self.npoints)
 
         """
         psd  = np.exp(pars) if self.islog else np.array(pars)*0 + 1
         return (psd * self.I_s).T * self.norm
-
-

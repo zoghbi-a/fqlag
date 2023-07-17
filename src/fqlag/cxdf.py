@@ -1,3 +1,5 @@
+"""Fitting cross spectrum and lag with functions; NOT TESTED"""
+# pylint: skip-file
 import numpy as np
 
 from .base import FqLagBin
