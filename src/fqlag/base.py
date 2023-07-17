@@ -330,8 +330,11 @@ class FqLagBase:
 
         """
 
-        # calculate the covariance matrix #
-        cov  = self.covariance(pars)
+        # use the cached variables if loglikelihood has already been called #
+        if (self.likelihood_vars is None or
+                not np.all(np.isclose(pars, self.likelihood_vars[0]))):
+            self.loglikelihood(pars)
+        cov = self.likelihood_vars[1]
 
         # generate the random variates #
         return  np.random.multivariate_normal(np.zeros(self.npoints), cov, size=size)
@@ -385,9 +388,12 @@ class FqLagBase:
         newmod = type(self)(t_aug, r_aug, r_aug, **self.params)
 
 
-        # calculate the covariance matrix and inverse of the data #
-        C    = self.covariance(pars)
-        chol = alg.cho_factor(C + np.diag(self.sig2), lower=False)
+
+        # use the cached variables if loglikelihood has already been called #
+        if (self.likelihood_vars is None or
+                not np.all(np.isclose(pars, self.likelihood_vars[0]))):
+            self.loglikelihood(pars)
+        _, cov, chol, log_like = self.likelihood_vars
         Ci   = alg.cho_solve(chol, np.identity(n_d))
         Ciy  = np.dot(Ci, self.yarr)
 
