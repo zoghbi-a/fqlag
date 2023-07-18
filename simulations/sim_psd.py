@@ -27,7 +27,7 @@ def simulate_light_curves(**kwargs):
     kwargs.setdefault('n', 2**8)
     kwargs.setdefault('dt', 1.0)
     kwargs.setdefault('mu', 100.0)
-    kwargs.setdefault('nsim', 100)
+    kwargs.setdefault('nsim', 200)
     kwargs.setdefault('gaussNoise', 1.0)
     kwargs.setdefault('nMult', 1)
     kwargs.setdefault('noiseSeed', 237)
@@ -48,6 +48,7 @@ def simulate_light_curves(**kwargs):
     gaps        = kwargs['gaps']
     sameGap     = kwargs['sameGap']
     
+    plot_lc = kwargs.get('plot_lc', False)
 
 
     # do the simulations #
@@ -60,8 +61,8 @@ def simulate_light_curves(**kwargs):
     
     lc = []
     for isim in range(nsim):
-        sim.simulate(n0 * nMult, dt, mu, 'rms')
-        tarr, yarr = sim.t[:n0], sim.x[:n0]
+        sim.simulate(n0 * nMult, dt, mu, norm='rms')
+        tarr, yarr = sim.lcurve[0][:n0], sim.lcurve[1][:n0]
         if not gaps is None:
             prob = np.cos(2*np.pi*tarr / gaps[1])**2
             prob = prob / prob.sum()
@@ -72,7 +73,7 @@ def simulate_light_curves(**kwargs):
             else: 
                 pass
             tarr, yarr = tarr[idx], yarr[idx]
-        yarr = sim.add_noise(yarr, gaussNoise, seed=noiseSeed, dt=dt)
+        yarr = sim.add_noise(yarr, gaussNoise, seed=noiseSeed, deltat=dt)
         if gaussNoise is None:
             yerr = ((yarr * dt)**0.5 / dt)
         else:
@@ -83,6 +84,12 @@ def simulate_light_curves(**kwargs):
     extra = {'psd_model': psd_model}
     extra.update(kwargs)
     # lc.shape: (nsim, 3, n)
+    ## -- plot lc only    
+    if plot_lc:
+        for t,r,re in lc[:5]:
+            plt.errorbar(t, r, re)
+        plt.savefig('figures/tmp.png')
+        exit(0)
     return np.array(lc), extra
 
 
@@ -119,8 +126,10 @@ def plot_psd(fits, fql, psd_model):
     plt.tight_layout()
 
 
-def fit_log_psd(fql, lc, sim_extra, suff, Dt=None):
+def fit_log_psd(fql, lc, sim_extra, suff, Dt=None, buff=False):
     """Calculated log psd for a set of simulated light curves
+    
+    Do all fits in log space
 
     Args:
         fql: array of frequency boundaries
@@ -128,9 +137,11 @@ def fit_log_psd(fql, lc, sim_extra, suff, Dt=None):
         sim_extra: dict from simulate_light_curves
         suff: e.g. '1' so files are saved as psd__1.*
         Dt: if not None, apply aliasing correction 
+        buff: if True, ignore buffer at low/high; if 1; ignore low
+        if 2, ignore high
 
     """
-
+    az.misc.set_fancy_plot(plt)
     p0 = np.zeros_like(fql[1:]) - 1
     fits = []
     for tarr,yarr,yerr in lc:
@@ -148,6 +159,19 @@ def fit_log_psd(fql, lc, sim_extra, suff, Dt=None):
 
     psd_model = sim_extra['psd_model']
     psd_model[1] = np.log(psd_model[1])
+    
+    # remove buff freq if needed before plotting
+    nfq = (fits.shape[1]-1)//2
+    if isinstance(buff, bool) and buff == True:
+        fits = np.hstack((fits[:,1:nfq-1], fits[:,nfq+1:-2], fits[:,[-1]]))
+        fql = fql[1:-1]
+    elif isinstance(buff, int) and buff == 1:
+        fits = np.hstack((fits[:,1:nfq-1], fits[:,nfq+1:]))
+        fql = fql[1:]
+    elif isinstance(buff, int) and buff == 2:
+        fits = np.hstack((fits[:,:nfq-1], fits[:,nfq+1:-2], fits[:,[-1]]))
+        fql = fql[:-1]
+    
     plot_psd(fits, fql, psd_model)
     os.system('mkdir -p figures')
     plt.savefig('figures/psd__%s.png'%suff)
@@ -157,228 +181,270 @@ def fit_log_psd(fql, lc, sim_extra, suff, Dt=None):
 
 
 def psd_1(**kwargs):
-    """powerlaw psd, log; no gaps, no alias, noleak, gauss noise, no extra freq"""
-
-    # fqlag parameters #
-    n       = 2**8
-    dt      = 1.0
-    fql     = np.logspace(np.log10(1./(dt*n)), np.log10(0.5*dt), 6)
-
-    
-    lc, extra = simulate_light_curves(n=n, dt=dt, nsim=100)
-
-    fit_log_psd(fql, lc, extra, '1')
+    """PSD
+    psd:    powerlaw
+    log:    yes
+    gaps:   no
+    alias:  no
+    extend: no
+    noise:  1.0
+    lfact : 1
+    """
+    n   = 2**8
+    dt  = 1.0
+    fql = np.logspace(np.log10(1./(n*dt)), np.log10(0.5*dt), 6)
+    lc, extra = simulate_light_curves(n=n, dt=dt)
+    fit_log_psd(fql, lc, extra, '1', Dt=None)
 
 
 def psd_2(**kwargs):
-    """powerlaw psd, log; no gaps, no alias, noleak, gauss noise
-    Frequencies extended
+    """PSD
+    psd:    powerlaw
+    log:    yes
+    gaps:   no
+    alias:  no
+    extend: 2 (included)
+    noise:  1.0
+    lfact : 1
     """
-
-    # fqlag parameters #
-    n       = 2**8
-    dt      = 1.0
-    fql     = np.logspace(np.log10(0.5/(dt*n)), np.log10(0.5*dt), 6)
-
-    
-    lc, extra = simulate_light_curves(n=n, dt=dt, nsim=100)
-
-    fit_log_psd(fql, lc, extra, '2')
+    n   = 2**8
+    dt  = 1.0
+    nexd = 2
+    fql = np.logspace(np.log10(1/(n*dt*nexd)), np.log10(0.5*dt*nexd), 6)
+    lc, extra = simulate_light_curves(n=n, dt=dt)
+    fit_log_psd(fql, lc, extra, '2', Dt=None)
 
 
 def psd_3(**kwargs):
-    """powerlaw psd, log; no gaps, no alias, noleak, gauss noise
-    Frequencies extended; smaller extension
+    """PSD
+    psd:    powerlaw
+    log:    yes
+    gaps:   no
+    alias:  no
+    extend: 2 (ignored)
+    noise:  1.0
+    lfact : 1
     """
-
-    # fqlag parameters #
-    n       = 2**8
-    dt      = 1.0
-    fql     = np.logspace(np.log10(0.8/(dt*n)), np.log10(0.5*dt), 6)
-
-    
-    lc, extra = simulate_light_curves(n=n, dt=dt, nsim=100)
-
-    fit_log_psd(fql, lc, extra, '3')
+    n   = 2**8
+    dt  = 1.0
+    nexd = 2
+    fql = np.logspace(np.log10(1/(n*dt)), np.log10(0.5*dt), 6)
+    fql = np.concatenate([[fql[0]/nexd], fql, [fql[-1]*nexd]])
+    lc, extra = simulate_light_curves(n=n, dt=dt)
+    fit_log_psd(fql, lc, extra, '3', Dt=None, buff=True)
 
 
 def psd_4(**kwargs):
-    """powerlaw psd, log; no gaps, no alias, noleak, gauss noise
-    small fq extension; steeper psd
+    """PSD
+    psd:    powerlaw
+    log:    yes
+    gaps:   no
+    alias:  no
+    extend: 4 (included)
+    noise:  1.0
+    lfact : 1
     """
-
-    # fqlag parameters #
-    n       = 2**8
-    dt      = 1.0
-    fql     = np.logspace(np.log10(0.8/(dt*n)), np.log10(0.5*dt), 6)
-
-    
-    lc, extra = simulate_light_curves(n=n, dt=dt, nsim=100, 
-                            input_psd=['powerlaw', [1e-5, -3]])
-
-    fit_log_psd(fql, lc, extra, '4')
+    n   = 2**8
+    dt  = 1.0
+    nexd = 2
+    fql = np.logspace(np.log10(1/(n*dt*nexd)), np.log10(0.5*dt*nexd), 6)
+    lc, extra = simulate_light_curves(n=n, dt=dt)
+    fit_log_psd(fql, lc, extra, '4', Dt=None)
 
 
 def psd_5(**kwargs):
-    """powerlaw psd, log; no gaps, no alias, noleak, gauss noise
-    small fq extension; flatter psd
+    """PSD
+    psd:    flatter powerlaw [1e-4, -1]
+    log:    yes
+    gaps:   no
+    alias:  no
+    extend: 2 (included)
+    noise:  1.0
+    lfact : 1
     """
-
-    # fqlag parameters #
-    n       = 2**8
-    dt      = 1.0
-    fql     = np.logspace(np.log10(0.8/(dt*n)), np.log10(0.5*dt), 6)
-
-    
-    lc, extra = simulate_light_curves(n=n, dt=dt, nsim=100, 
-                            input_psd=['powerlaw', [1e-4, -1]])
-
-    fit_log_psd(fql, lc, extra, '5')
+    n   = 2**8
+    dt  = 1.0
+    nexd = 2
+    fql = np.logspace(np.log10(1/(n*dt*nexd)), np.log10(0.5*dt*nexd), 6)
+    lc, extra = simulate_light_curves(n=n, dt=dt, input_psd=['powerlaw', [1e-4, -1]])
+    fit_log_psd(fql, lc, extra, '5', Dt=None)
 
 
 def psd_6(**kwargs):
-    """powerlaw psd, log; no gaps, no alias, gauss noise
-    small fq extension; steeper psd; x4 read leak
+    """PSD
+    psd:    steeper powerlaw [1e-4, -2.5]
+    log:    yes
+    gaps:   no
+    alias:  no
+    extend: 2 (included)
+    noise:  1.0
+    lfact : 1
     """
-
-    # fqlag parameters #
-    n       = 2**8
-    dt      = 1.0
-    fql     = np.logspace(np.log10(0.8/(dt*n)), np.log10(0.5*dt), 6)
-
-    
-    lc, extra = simulate_light_curves(n=n, dt=dt, nsim=100, nMult=4)
-
-    fit_log_psd(fql, lc, extra, '6')
+    n   = 2**8
+    dt  = 1.0
+    nexd = 2
+    fql = np.logspace(np.log10(1/(n*dt*nexd)), np.log10(0.5*dt*nexd), 6)
+    lc, extra = simulate_light_curves(n=n, dt=dt, input_psd=['powerlaw', [1e-4, -2.5]])
+    fit_log_psd(fql, lc, extra, '6', Dt=None)
 
 
 def psd_7(**kwargs):
-    """powerlaw psd, log; no gaps, no alias, gauss noise
-    0.5 fq extension; x4 red leak
+    """PSD
+    psd:    powerlaw
+    log:    yes
+    gaps:   no
+    alias:  no
+    extend: 2 (included)
+    noise:  1.0
+    lfact : 4
     """
-
-    # fqlag parameters #
-    n       = 2**8
-    dt      = 1.0
-    fql     = np.logspace(np.log10(0.5/(dt*n)), np.log10(0.5*dt), 6)
-
-    
-    lc, extra = simulate_light_curves(n=n, dt=dt, nsim=100, nMult=4)
-
-    fit_log_psd(fql, lc, extra, '7')
+    n   = 2**8
+    dt  = 1.0
+    nexd = 2
+    fql = np.logspace(np.log10(1/(n*dt*nexd)), np.log10(0.5*dt*nexd), 6)
+    lc, extra = simulate_light_curves(n=n, dt=dt, nMult=4)
+    fit_log_psd(fql, lc, extra, '7', Dt=None)
 
 
 def psd_8(**kwargs):
-    """powerlaw psd, log; no gaps, no alias, gauss noise
-    0.5 fq extension; x8 red leak
+    """PSD
+    psd:    steeper powerlaw [1e-6, -2.5]
+    log:    yes
+    gaps:   no
+    alias:  no
+    extend: 2 (included)
+    noise:  1.0
+    lfact : 4
     """
-
-    # fqlag parameters #
-    n       = 2**8
-    dt      = 1.0
-    fql     = np.logspace(np.log10(0.5/(dt*n)), np.log10(0.5*dt), 6)
-
-    
-    lc, extra = simulate_light_curves(n=n, dt=dt, nsim=100, nMult=8)
-
-    fit_log_psd(fql, lc, extra, '8')
+    n   = 2**8
+    dt  = 1.0
+    nexd = 2
+    fql = np.logspace(np.log10(1/(n*dt*nexd)), np.log10(0.5*dt*nexd), 6)
+    lc, extra = simulate_light_curves(n=n, dt=dt, nMult=4, input_psd=['powerlaw', [1e-6, -2.5]])
+    fit_log_psd(fql, lc, extra, '8', Dt=None)
 
 
 def psd_9(**kwargs):
-    """powerlaw psd, log; no gaps, no alias, gauss noise
-    0.5 fq extension; x8 red leak; rescale lc mean
+    """PSD
+    psd:    steeper powerlaw [1e-6, -2.5]
+    log:    yes
+    gaps:   no
+    alias:  no
+    extend: 5 (included)
+    noise:  1.0
+    lfact : 4
     """
-
-    # fqlag parameters #
-    n       = 2**8
-    dt      = 1.0
-    fql     = np.logspace(np.log10(0.5/(dt*n)), np.log10(0.5*dt), 6)
-
-    
-    lc, extra = simulate_light_curves(n=n, dt=dt, nsim=100, nMult=8)
-    lc[:,1] = lc[:,1] - lc[:,1].mean(1)[:,None] + lc[:,1].mean()
-
-    fit_log_psd(fql, lc, extra, '9')
+    n   = 2**8
+    dt  = 1.0
+    nexd = 5
+    fql = np.logspace(np.log10(1/(n*dt*nexd)), np.log10(0.5*dt*nexd), 6)
+    lc, extra = simulate_light_curves(n=n, dt=dt, nMult=4, input_psd=['powerlaw', [1e-6, -2.5]])
+    fit_log_psd(fql, lc, extra, '9', Dt=None)
 
 
 def psd_10(**kwargs):
-    """powerlaw psd, log; no gaps, no alias, gauss noise
-    0.5 fq extension; x4 red leak; rescale lc mean
-    different psd (changing index only produces unrealistic lc -> redcue norm too)
+    """PSD
+    psd:    steeper powerlaw [1e-6, -2.5]
+    log:    yes
+    gaps:   no
+    alias:  no
+    extend: 5 (extra)
+    noise:  1.0
+    lfact : 4
     """
-
-    # fqlag parameters #
-    n       = 2**8
-    dt      = 1.0
-    fql     = np.logspace(np.log10(0.5/(dt*n)), np.log10(0.5*dt), 6)
+    n   = 2**8
+    dt  = 1.0
+    nexd = 5
+    fql = np.logspace(np.log10(1/(n*dt)), np.log10(0.5*dt), 5)
+    fql = np.concatenate([[fql[0]/nexd], fql, [fql[-1]*nexd]])
+    lc, extra = simulate_light_curves(n=n, dt=dt, nMult=4, input_psd=['powerlaw', [1e-6, -2.5]])
+    fit_log_psd(fql, lc, extra, '10', Dt=None, buff=True)
 
     
-    lc, extra = simulate_light_curves(n=n, dt=dt, nsim=100, nMult=4,
-                    input_psd=['powerlaw', [1e-6, -3]])
-    lc[:,1] = lc[:,1] - lc[:,1].mean(1)[:,None] + lc[:,1].mean()
-
-    fit_log_psd(fql, lc, extra, '10')
-
-
 def psd_11(**kwargs):
-    """bkn powerlaw psd, log; no gaps, no alias, gauss noise
-    0.5 fq extension; x4 red leak; rescale lc mean; broken pl psd
+    """PSD
+    psd:    broken powerlaw [1e-6, -1, -3, 3e-3]
+    log:    yes
+    gaps:   no
+    alias:  no
+    extend: 2 (include)
+    noise:  1.0
+    lfact : 4
     """
-
-    # fqlag parameters #
-    n       = 2**8
-    dt      = 1.0
-    fql     = np.logspace(np.log10(0.5/n), np.log10(0.5*dt), 6)
-
-    
-    lc, extra = simulate_light_curves(n=n, dt=dt, nsim=100, nMult=4,
-            input_psd=['broken_powerlaw', [1e-6, -1, -3, 3e-3]])
-    lc[:,1] = lc[:,1] - lc[:,1].mean(1)[:,None] + lc[:,1].mean()
-
-    fit_log_psd(fql, lc, extra, '11')
-
+    n   = 2**8
+    dt  = 1.0
+    nexd = 2
+    fql = np.logspace(np.log10(1/(n*dt*nexd)), np.log10(0.5*dt*nexd), 6)
+    lc, extra = simulate_light_curves(
+        n=n, dt=dt, nMult=4,
+        input_psd=['broken_powerlaw', [1e-7, -1, -3, 3e-3]]
+    )
+    fit_log_psd(fql, lc, extra, '11', Dt=None)
 
 
 def psd_12(**kwargs):
-    """bkn powerlaw psd, log; Gaps, no alias, Lager gauss noise
-    0.5 fq extension; x4 red leak; rescale lc mean; broken pl psd
+    """PSD
+    psd:    broken powerlaw [1e-6, -1, -2, 3e-3]
+    log:    yes
+    gaps:   no
+    alias:  no
+    extend: 2 (include)
+    noise:  1.0
+    lfact : 4
     """
-
-    # fqlag parameters #
-    n       = 2**8
-    dt      = 1.0
+    n   = 2**8
+    dt  = 1.0
+    nexd = 2
+    fql = np.logspace(np.log10(1/(n*dt*nexd)), np.log10(0.5*dt*nexd), 6)
+    lc, extra = simulate_light_curves(
+        n=n, dt=dt, nMult=4,
+        input_psd=['broken_powerlaw', [7e-5, -1, -2, 3e-3]]
+    )
+    fit_log_psd(fql, lc, extra, '12', Dt=None)
 
     
-    lc, extra = simulate_light_curves(n=n, dt=dt, nsim=100, nMult=4,
-            input_psd=['broken_powerlaw', [1e-4, -1, -2, 1e-3]], gaussNoise=1,
-            gaps=[3372, 50])
-    
-    fql     = np.logspace(np.log10(0.5/(lc[0,0,-1]-lc[0,0,0])), np.log10(0.5*dt), 6)
-
-    lc[:,1] = lc[:,1] - lc[:,1].mean(1)[:,None] + lc[:,1].mean()
-
-    fit_log_psd(fql, lc, extra, '12')
-
-
 def psd_13(**kwargs):
-    """bkn powerlaw psd, log; Same Gaps, no alias, Lager gauss noise
-    0.5 fq extension; x4 red leak; rescale lc mean; broken pl psd
+    """PSD
+    psd:    broken powerlaw [1e-6, -1, -2, 3e-3]
+    log:    yes
+    gaps:   yes, same
+    alias:  no
+    extend: 2 (include)
+    noise:  1.0
+    lfact : 4
     """
-
-    # fqlag parameters #
-    n       = 2**8
-    dt      = 1.0
-
+    n   = 2**8
+    dt  = 1.0
+    nexd = 2
+    fql = np.logspace(np.log10(1/(n*dt*nexd)), np.log10(0.5*dt*nexd), 6)
+    lc, extra = simulate_light_curves(
+        n=n, dt=dt, nMult=4,
+        input_psd=['broken_powerlaw', [7e-5, -1, -2, 3e-3]],
+        gaps=[3372, 50], sameGap=True
+    )
+    fit_log_psd(fql, lc, extra, '13', Dt=None)
     
-    lc, extra = simulate_light_curves(n=n, dt=dt, nsim=100, nMult=4,
-            input_psd=['broken_powerlaw', [1e-4, -1, -2, 1e-3]], gaussNoise=1,
-            gaps=[3372, 50], sameGap=True)
+def psd_14(**kwargs):
+    """PSD
+    psd:    broken powerlaw [1e-6, -1, -2, 3e-3]
+    log:    yes
+    gaps:   yes, different
+    alias:  no
+    extend: 2 (include)
+    noise:  1.0
+    lfact : 4
+    """
+    n   = 2**8
+    dt  = 1.0
+    nexd = 2
+    fql = np.logspace(np.log10(1/(n*dt*nexd)), np.log10(0.5*dt*nexd), 6)
+    lc, extra = simulate_light_curves(
+        n=n, dt=dt, nMult=4,
+        input_psd=['broken_powerlaw', [7e-5, -1, -2, 3e-3]],
+        gaps=[3372, 50], sameGap=False
+    )
+    fit_log_psd(fql, lc, extra, '14', Dt=None)
     
-    fql     = np.logspace(np.log10(0.5/(lc[0,0,-1]-lc[0,0,0])), np.log10(0.5*dt), 6)
-
-    lc[:,1] = lc[:,1] - lc[:,1].mean(1)[:,None] + lc[:,1].mean()
-
-    fit_log_psd(fql, lc, extra, '13')
 
 
 if __name__ == '__main__':
@@ -387,82 +453,15 @@ if __name__ == '__main__':
         description="Run simulations for the PSD calculation",            
         formatter_class=ARG.ArgumentDefaultsHelpFormatter) 
 
-
-    parser.add_argument('--psd_1', action='store_true', default=False,
-            help="Simple psd simulation.")
-    parser.add_argument('--psd_2', action='store_true', default=False,
-            help="Simple psd simulation. Extended freq")
-    parser.add_argument('--psd_3', action='store_true', default=False,
-            help="Simple psd simulation. Extended freq")
-    parser.add_argument('--psd_4', action='store_true', default=False,
-            help="Simple psd simulation. Extended freq; different psd")
-    parser.add_argument('--psd_5', action='store_true', default=False,
-            help="Simple psd simulation. Extended freq; different psd")
-
-    parser.add_argument('--psd_6', action='store_true', default=False,
-            help="Simple psd simulation. Extended freq; red leak")
-    parser.add_argument('--psd_7', action='store_true', default=False,
-            help="Simple psd simulation. Extended freq; red leak")
-    parser.add_argument('--psd_8', action='store_true', default=False,
-            help="Simple psd simulation. Extended freq; red leak")
-    parser.add_argument('--psd_9', action='store_true', default=False,
-            help="Simple psd simulation. Extended freq; red leak; re-mean")
-    parser.add_argument('--psd_10', action='store_true', default=False,
-            help="Simple psd simulation. Extended freq; red leak; re-mean, diff psd")
-    parser.add_argument('--psd_11', action='store_true', default=False,
-            help="Simple psd simulation. Extended freq; red leak; re-mean, bpl psd")
-    parser.add_argument('--psd_12', action='store_true', default=False,
-            help="Extended freq; red leak; re-mean, bpl psd; Gaps")
-    parser.add_argument('--psd_13', action='store_true', default=False,
-            help="Extended freq; red leak; re-mean, bpl psd; same Gap")
+    parser.add_argument('-p', '--psd', metavar='psd', type=int,
+            help='Run psd simulation number psd')
 
 
     # process arguments #
     args = parser.parse_args()
 
-
-    # powerlaw psd, log; no gaps, no alias, noleak, gauss noise, no extra freq #
-    if args.psd_1: psd_1()
-
-    # powerlaw psd, log; no gaps, no alias, noleak, gauss noise, extended freq #
-    if args.psd_2: psd_2()
-
-    # powerlaw psd, log; no gaps, no alias, noleak, gauss noise, extended freq #
-    if args.psd_3: psd_3()
-
-    # diff powerlaw psd, log; no gaps, no alias, noleak, gauss noise, extended freq #
-    if args.psd_4: psd_4()
-
-    # diff powerlaw psd, log; no gaps, no alias, noleak, gauss noise, extended freq #
-    if args.psd_5: psd_5()
-
-    # diff powerlaw psd, log; no gaps, no alias, leak, gauss noise, extended freq #
-    if args.psd_6: psd_6()
-
-    # powerlaw psd, log; no gaps, no alias, leak, gauss noise, 0.5 extended freq #
-    if args.psd_7: psd_7()
-
-    # powerlaw psd, log; no gaps, no alias, longer leak, gauss noise, 0.5 extended freq #
-    if args.psd_8: psd_8()
-
-    # powerlaw psd, log; no gaps, no alias, longer leak, gauss noise, 
-    # 0.5 extended freq; reset the mean
-    if args.psd_9: psd_9()
-
-    # diff powerlaw psd, log; no gaps, no alias, longer leak, gauss noise, 
-    # 0.5 extended freq; reset the mean
-    if args.psd_10: psd_10()
-
-    # broken powerlaw psd, log; no gaps, no alias, longer leak, gauss noise, 
-    # 0.5 extended freq; reset the mean
-    if args.psd_11: psd_11()
-
-    # broken powerlaw psd, log; Gaps, no alias, longer leak, Larger gauss noise, 
-    # 0.5 extended freq; reset the mean
-    if args.psd_12: psd_12()
-
-    # broken powerlaw psd, log; Same Gaps, no alias, longer leak, Larger gauss noise, 
-    # 0.5 extended freq; reset the mean
-    if args.psd_13: psd_13()
-
-
+    if not os.path.exists(f'npz/psd__{args.psd}.npz') or not os.path.exists(f'figures/psd__{args.psd}.png'):
+        psd_f = locals()[f'psd_{args.psd}']
+        psd_f()
+    else:
+        print('files exist; nothing to do')

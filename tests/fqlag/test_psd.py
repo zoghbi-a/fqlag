@@ -40,3 +40,83 @@ class TestPsd(unittest.TestCase):
         g0 = np.array(g0)
 
         self.assertAlmostEqual(g0[0], grad[0], 3)
+
+
+    def test__derivative_with_check_grad__dt_nolog(self):
+        """Check with misc.check_grad"""
+        t = np.array([0.,1,2,3])
+        y = np.array([1.,4,2,7])
+        ye = np.array([0.1, 0.1, 0.1, 0.1])
+
+        pmod = fqlag.Psd(t, y, ye, fql=[0.3, 0.5], dt=1.0, log=False)
+        p0 = np.array([0.5])
+
+        l, g, g0 = fqlag.misc.check_grad(pmod, p0)
+        self.assertAlmostEqual(g[0], g0[0], 3)
+
+
+    def test__derivative_with_check_grad__no_dt_nolog(self):
+        """Check with misc.check_grad"""
+        t = np.array([0.,1,2,3])
+        y = np.array([1.,4,2,7])
+        ye = np.array([0.1, 0.1, 0.1, 0.1])
+
+        pmod = fqlag.Psd(t, y, ye, fql=[0.3, 0.5], dt=None, log=False)
+        p0 = np.array([0.5])
+
+        l, g, g0 = fqlag.misc.check_grad(pmod, p0)
+        self.assertAlmostEqual(g[0], g0[0], 3)
+
+
+    def test__derivative_with_check_grad__another_fql_nolog(self):
+        """Check with misc.check_grad"""
+        t = np.array([0.,1,2,3])
+        y = np.array([1.,4,2,7])
+        ye = np.array([0.1, 0.1, 0.1, 0.1])
+
+        pmod = fqlag.Psd(t, y, ye, fql=[0.3, 0.4, 0.5], dt=1.0, log=False)
+        p0 = np.array([0.5, 0.4])
+
+        l, g, g0 = fqlag.misc.check_grad(pmod, p0)
+        self.assertAlmostEqual(g[0], g0[0], 3)
+        self.assertAlmostEqual(g[1], g0[1], 3)
+
+
+    def test__derivative_with_check_grad__dt_log(self):
+        """Check with misc.check_grad"""
+        t = np.array([0.,1,2,3])
+        y = np.array([1.,4,2,7])
+        ye = np.array([0.1, 0.1, 0.1, 0.1])
+
+        pmod = fqlag.Psd(t, y, ye, fql=[0.3, 0.5], dt=1.0, log=True)
+        p0 = np.array([0.5])
+
+        l, g, g0 = fqlag.misc.check_grad(pmod, p0)
+        self.assertAlmostEqual(g[0], g0[0], 3)
+
+
+    def test__derivative_with_check_grad__no_dt_log(self):
+        """Check with misc.check_grad"""
+        t = np.array([0.,1,2,3])
+        y = np.array([1.,4,2,7])
+        ye = np.array([0.1, 0.1, 0.1, 0.1])
+
+        pmod = fqlag.Psd(t, y, ye, fql=[0.3, 0.5], dt=None, log=True)
+        p0 = np.array([0.5])
+
+        l, g, g0 = fqlag.misc.check_grad(pmod, p0)
+        self.assertAlmostEqual(g[0], g0[0], 3)
+
+
+    def test__derivative_with_check_grad__another_fql_log(self):
+        """Check with misc.check_grad"""
+        t = np.array([0.,1,2,3])
+        y = np.array([1.,4,2,7])
+        ye = np.array([0.1, 0.1, 0.1, 0.1])
+
+        pmod = fqlag.Psd(t, y, ye, fql=[0.3, 0.4, 0.5], dt=1.0, log=True)
+        p0 = np.array([0.5, 0.4])
+
+        l, g, g0 = fqlag.misc.check_grad(pmod, p0)
+        self.assertAlmostEqual(g[0], g0[0], 3)
+        self.assertAlmostEqual(g[1], g0[1], 3)
