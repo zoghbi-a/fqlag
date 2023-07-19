@@ -7,7 +7,7 @@ import scipy.stats as st
 from scipy.misc import derivative
 
 
-def check_grad(mod, p0, dx=1e-3):
+def check_grad(mod, p0, dx=1e-5):
     """Compare the gradient from mod.loglikelihood_derivative
     against numerical derivative.
 

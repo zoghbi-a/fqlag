@@ -105,8 +105,8 @@ class Cxd(FqLagBin):
         """
 
         # get normalized cxd values #
-        npar = len(pars)
-        cxd, phi = pars[:npar], pars[npar:]
+        nfq = len(self.params['fql']) - 1
+        cxd, phi = pars[:nfq], pars[nfq:]
         if self.islog:
             cxd = np.exp(cxd)
         cxd = cxd * self.norm
@@ -145,13 +145,12 @@ class Cxd(FqLagBin):
         where self.npoints is the sum of the lengths of the two light curves
 
         """
-        npar = len(pars)
-        cxd, phi = pars[:npar], pars[npar:]
+        nfq = len(self.params['fql']) - 1
+        cxd, phi = pars[:nfq], pars[nfq:]
         if self.islog:
             cxd = np.exp(cxd)
         cxd  = cxd * self.norm
         dcxd = cxd if self.islog else self.norm
-        nfq = len(phi)
 
         n1 = self.npt1
         I_s = self.I_s[:n1, n1:]
@@ -268,8 +267,8 @@ class Psi(FqLagBin):
         where self.noints is the sum of the lengths of the two light curves
 
         """
-        npar = len(pars)
-        psi, phi = pars[:npar], pars[npar:]
+        nfq = len(self.params['fql']) - 1
+        psi, phi = pars[:nfq], pars[nfq:]
         if self.islog:
             psi = np.exp(psi)
         psd  = self.psd
@@ -295,13 +294,12 @@ class Psi(FqLagBin):
 
 
     def covariance_derivative(self, pars):
-        npar = len(pars)
-        psi, phi = pars[:npar], pars[npar:]
+        nfq = len(self.params['fql']) - 1
+        psi, phi = pars[:nfq], pars[nfq:]
         if self.islog:
             psi = np.exp(psi)
         psd  = self.psd
         cxd  = psd * psi * self.norm
-        nfq  = len(phi)
 
         dpsi  = psi if self.islog else 1.0
         dpsd2 = 2 * dpsi * psd * psi * self.norm2
@@ -379,8 +377,8 @@ class CxdRI(Cxd):
 
 
     def covariance(self, pars):
-        npar = len(pars)
-        re, im = pars[:npar], pars[npar:]
+        nfq = len(self.params['fql']) - 1
+        re, im = pars[:nfq], pars[nfq:]
         re,im = re*self.norm, im*self.norm
         cxd = (re**2 + im**2)**0.5
         phi = np.arctan2(im, re)
@@ -397,12 +395,11 @@ class CxdRI(Cxd):
 
 
     def covariance_derivative(self, pars):
-        npar = len(pars)
-        re, im = pars[:npar], pars[npar:]
+        nfq = len(self.params['fql']) - 1
+        re, im = pars[:nfq], pars[nfq:]
         re,im = re*self.norm, im*self.norm
         cxd = (re**2 + im**2)**0.5
         phi = np.arctan2(im, re)
-        nfq = len(phi)
 
         n1 = self.npt1
         I_s = self.I_s[:n1, n1:]

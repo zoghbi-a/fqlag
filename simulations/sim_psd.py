@@ -4,10 +4,10 @@ import numpy as np
 import sys
 import os
 import argparse as ARG
-import pylab as plt
+import matplotlib.pyplot as plt
 
 sys.path.insert(0, os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '..')))
+    os.path.join(os.path.dirname(__file__), '../src')))
 import fqlag
 
 try:
