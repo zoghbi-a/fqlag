@@ -6,16 +6,11 @@ import os
 import argparse as ARG
 import matplotlib.pyplot as plt
 
+import aztools as az
+
 sys.path.insert(0, os.path.abspath(
     os.path.join(os.path.dirname(__file__), '../src')))
 import fqlag
-
-try:
-    import aztools as az
-except:
-    raise ImportError(('aztools was not found. Please download from '
-        'https://github.com/zoghbi-a/aztools'))
-
 
 def simulate_light_curves(**kwargs):
     """Simulate light curves"""
