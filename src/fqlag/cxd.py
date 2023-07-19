@@ -1,5 +1,4 @@
 """Class for piece-wise frequency-dependent cross-spectra and lag"""
-# pylint: skip-file
 import numpy as np
 
 from .base import FqLagBin
@@ -8,40 +7,44 @@ from .psd import Psd
 
 class Cxd(FqLagBin):
     """Model for calculating Cross Spectral Density (CXD) and phase lag
-        of two light curves as peicewise values at some given frequency bins
-
-    This class defines the covariance kernel, and the calculations are done
-    in FqLagBin that Cxd inherits from.
-    An alternative modeling can be done by calculating the amplitude and phase
-    of the transfer function
-
-    Parameters
-    ----------
-    tarr: list
-        a list of two numpy arrays giving the time axis of each light curve.
-    yarr: list
-        a list of two numpy arrays giving the count rate or flux of each light curve
-    yerr: list
-        a list of two numpy arrays giving the 1-sigma measurement uncertainity
-        in the count rate or flux of each light curve.
-    fql: np.ndarray
-        a numpy array of frequency bin boundaries
-    p1, p2: np.ndarray
-        the PSD parameter values corresponding to the frequency bins defined 
-        in fql for each light curve. These should be calculated beforehand using
-        Psd class. dt and log parameters here should be consistent with those used
-        to obtain p1 and p2
-    dt: float
-        sampling time of the light curves. If given, corrections to sampling
-        bias is applied, otherwise, we don't apply it.
-    log: bool
-        if True, the cross spectrum parameters are in log units (p1 and p2
-        are assumed to be log too in this case), otherwise,  the cxd parameters
-        are in linear scale. The phase parameters have linear scale.
+        of two light curves as peicewise values at some given frequency bins.
 
     """
 
     def __init__(self, tarr, yarr, yerr, fql, p1, p2, dt=None, log=False):
+        """Initialize a Cxd instance to calculate the cross spectrum and phase lags.
+
+        This class defines the covariance kernel, and the calculations are done
+        in FqLagBin that Cxd inherits from.
+        An alternative modeling can be done by calculating the amplitude and phase
+        of the transfer function
+
+        Parameters
+        ----------
+        tarr: list
+            a list of two numpy arrays giving the time axis of each light curve.
+        yarr: list
+            a list of two numpy arrays giving the count rate or flux of each light curve
+        yerr: list
+            a list of two numpy arrays giving the 1-sigma measurement uncertainity
+            in the count rate or flux of each light curve.
+        fql: np.ndarray
+            a numpy array of frequency bin boundaries
+        p1, p2: np.ndarray
+            the PSD parameter values corresponding to the frequency bins defined 
+            in fql for each light curve. These should be calculated beforehand using
+            Psd class. dt and log parameters here should be consistent with those used
+            to obtain p1 and p2
+        dt: float
+            sampling time of the light curves. If given, corrections to sampling
+            bias is applied, otherwise, we don't apply it.
+        log: bool
+            if True, the cross spectrum parameters are in log units (p1 and p2
+            are assumed to be log too in this case), otherwise,  the cxd parameters
+            are in linear scale. The phase parameters have linear scale.
+
+        """
+
         # concatenate the arrays from the two light curves
         tar = np.concatenate(tarr)
         yar = np.concatenate([x-x.mean() for x in yarr])
@@ -167,48 +170,53 @@ class Cxd(FqLagBin):
 
 
 class Psi(FqLagBin):
-    """Model for calculating Amplitude (Psi) and phase lag
-        of two light curves as peicewise values at some given frequency bins
-
-    This class defines the covariance kernel, and the calculations are done
-    in FqLagBin that Psi inherits from.
-    An alternative modeling can be done by calculating the cross spectrum and phase
-    using Cxd
-
-    Parameters
-    ----------
-    tarr: list
-        a list of two numpy arrays giving the time axis of each light curve.
-    yarr: list
-        a list of two numpy arrays giving the count rate or flux of each light curve
-    yerr: list
-        a list of two numpy arrays giving the 1-sigma measurement uncertainity
-        in the count rate or flux of each light curve.
-    fql: np.ndarray
-        a numpy array of frequency bin boundaries
-    p1: np.ndarray
-        the PSD parameter values corresponding to the frequency bins defined 
-        in fql for each light curve. These should be calculated beforehand using
-        Psd class. dt and log parameters here should be consistent with those used
-        to obtain p1 and p2
-    dt: float
-        sampling time of the light curves. If given, corrections to sampling
-        bias is applied, otherwise, we don't apply it.
-    log: bool
-        if True, the cross spectrum parameters are in log units (p1 and p2
-        are assumed to be log too in this case), otherwise,  the cxd parameters
-        are in linear scale. The phase parameters have linear scale.
+    """Model for calculating Amplitude (Psi) and phase lag instead of the 
+    cross spectrum of two light curves as peicewise values at some given 
+    frequency bins. THIS HAS NOT BEEN TESTED EXTENSIVELY.
             
     """
 
 
     def __init__(self, tarr, yarr, yerr, fql, p1, dt=None, log=True):
+        """Initialize Psi instance to calculate the amplitude and phase
+        of a transfer function.
+        
+        This class defines the covariance kernel, and the calculations are done
+        in FqLagBin that Psi inherits from.
+        An alternative modeling can be done by calculating the cross spectrum and phase
+        using Cxd
+
+        Parameters
+        ----------
+        tarr: list
+            a list of two numpy arrays giving the time axis of each light curve.
+        yarr: list
+            a list of two numpy arrays giving the count rate or flux of each light curve
+        yerr: list
+            a list of two numpy arrays giving the 1-sigma measurement uncertainity
+            in the count rate or flux of each light curve.
+        fql: np.ndarray
+            a numpy array of frequency bin boundaries
+        p1: np.ndarray
+            the PSD parameter values corresponding to the frequency bins defined 
+            in fql for the first light curve. These should be calculated beforehand using
+            Psd class. dt and log parameters here should be consistent with those used
+            to obtain p1.
+        dt: float
+            sampling time of the light curves. If given, corrections to sampling
+            bias is applied, otherwise, we don't apply it.
+        log: bool
+            if True, the amplitde parameters are in log units (p1 is assumed to be
+            log too in this case), otherwise,  the cxd parameters are in linear scale. 
+            The phase parameters have linear scale.
+        
+        """
         # concatenate the arrays from the two light curves
-        t  = np.concatenate(tarr)
-        y  = np.concatenate([x-x.mean() for x in yarr])
-        ye = np.concatenate(yerr)
+        tar = np.concatenate(tarr)
+        yar = np.concatenate([x-x.mean() for x in yarr])
+        yer = np.concatenate(yerr)
         self.npt1 = len(tarr[0])
-        super().__init__(t, y, ye, fql, dt)
+        super().__init__(tar, yar, yer, fql, dt)
         self.norm1 = np.mean(yarr[0])**2
         self.norm2 = np.mean(yarr[1])**2
         self.norm  = (self.norm1*self.norm2)**0.5
@@ -228,8 +236,8 @@ class Psi(FqLagBin):
         the transfer function.
         
         The model parameters are the amplitude (first half of the parameters) 
-        and the phase delay (second half) at the geometric center of the 
-        frequency bins. 
+        and the phase delay (second half) of the cross spectrum at the geometric 
+        center of the frequency bins. 
         If islog: the amplitude parameters are in log units
         There are npar (= 2*self.nfq) parameters
 
@@ -287,34 +295,11 @@ class Psi(FqLagBin):
 
 
     def covariance_derivative(self, pars):
-        """First Derivative of the covariance kernel function 
-        for modeling the amplitude and phase of the transfer function between
-        two light curves.
-
-        This calculates the derivative of covariance values with respect
-        to each model parameter
-
-
-        Parameters
-        ----------
-        pars: np.ndarray
-            parameters that defined the covariance kernel.
-            pars[:nfq] are the (positive) amplitude values of the transfer function
-                 at nfq bins
-            pars[nfq:] are the phase delays values at nfq bins
-
-        Returns
-        -------
-        a matrix of first derivatives with shape (npar, self.npoints, self.npoints)
-        where self.npoints is the sum of the lengths of the two light curves
-
-        """
         npar = len(pars)
         psi, phi = pars[:npar], pars[npar:]
         if self.islog:
             psi = np.exp(psi)
         psd  = self.psd
-        psd2 = psd * psi**2 * self.norm2
         cxd  = psd * psi * self.norm
         nfq  = len(phi)
 
@@ -350,33 +335,50 @@ class Psi(FqLagBin):
 
 
 
-class CxdRI(FqLagBin):
-    """Use real and imaginary parts; THIS HAS NOT BEEN TESTED"""
+class CxdRI(Cxd):
+    """Model for calculating the real and imaginary parts of the transfer 
+    function of two light curves as peicewise values at some given 
+    frequency bins. THIS HAS NOT BEEN TESTED EXTENSIVELY.
+    
+    """
 
     def __init__(self, tarr, yarr, yerr, fql, p1, p2, dt=None):
-        t  = np.concatenate(tarr)
-        y  = np.concatenate([x-x.mean() for x in yarr])
-        ye = np.concatenate(yerr)
-        self.npt1 = len(tarr[0])
-        super().__init__(t, y, ye, fql, dt)
+        """Initialize cxdRI instance to calculate the real and imaginary parts
+        of the transfer function.
+        
+        This class defines the covariance kernel, and the calculations are done
+        in FqLagBin that Psi inherits from.
+        An alternative modeling can be done by calculating the cross spectrum and phase
+        using Cxd
 
-        # constant part of covariance #
-        nfq = len(fql) - 1
-        pm1 = Psd(tarr[0], yarr[0], yerr[0], fql, dt)
-        self.res_1 = pm1.covariance(p1)
-        self.d_res_1 = np.zeros((2, self.npt1, self.npt1, nfq), np.double)
-
-        pm2 = Psd(tarr[1], yarr[1], yerr[1], fql, dt)
-        self.res_2 = pm2.covariance(p2)
-        self.d_res_2 = np.zeros((2, self.npoints-self.npt1, self.npoints-self.npt1, nfq), np.double)
-
-        self.norm = pm1.mean * pm2.mean
-        self.params = {'fql':fql, 'p1':p1, 'p2':p2, 'dt':dt}
+        Parameters
+        ----------
+        tarr: list
+            a list of two numpy arrays giving the time axis of each light curve.
+        yarr: list
+            a list of two numpy arrays giving the count rate or flux of each light curve
+        yerr: list
+            a list of two numpy arrays giving the 1-sigma measurement uncertainity
+            in the count rate or flux of each light curve.
+        fql: np.ndarray
+            a numpy array of frequency bin boundaries
+        p1, p2: np.ndarray
+            the PSD parameter values corresponding to the frequency bins defined 
+            in fql for each light curve. These should be calculated beforehand using
+            Psd class. dt and log parameters here should be consistent with those used
+            to obtain p1 and p2
+        dt: float
+            sampling time of the light curves. If given, corrections to sampling
+            bias is applied, otherwise, we don't apply it.
+        log: bool
+            if True, the amplitde parameters are in log units (p1 is assumed to be
+            log too in this case), otherwise,  the cxd parameters are in linear scale. 
+            The phase parameters have linear scale.
+        """
+        super().__init__(tarr, yarr, yerr, fql, p1, p2, dt)
 
 
     def covariance(self, pars):
-
-
         npar = len(pars)
         re, im = pars[:npar], pars[npar:]
         re,im = re*self.norm, im*self.norm
@@ -395,7 +397,6 @@ class CxdRI(FqLagBin):
 
 
     def covariance_derivative(self, pars):
-
         npar = len(pars)
         re, im = pars[:npar], pars[npar:]
         re,im = re*self.norm, im*self.norm

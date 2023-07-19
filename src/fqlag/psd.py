@@ -8,28 +8,6 @@ from .base import FqLagBin
 class Psd(FqLagBin):
     """Model for calculating Power Spectral Density (PSD) 
         as peicewise values at some frequency bins
-
-    This class defines the covariance kernel, and the calculations are done
-    in FqLagBin that Psd inherits from.
-
-    Parameters
-    ----------
-    tarr: np.ndarray
-        a numpy array giving the time axis of the light curve.
-    yarr: np.ndarray
-        a numpy array giving the count rate or flux
-    yerr: np.ndarray
-        a numpy array giving the 1-sigma measurement uncertainity
-        in the count rate or flux.
-    fql: np.ndarray
-        a numpy array of frequency bin boundaries
-    dt: float
-        sampling time of the light curves. If given, corrections to sampling
-        bias is applied, otherwise, we don't apply it.
-    log: bool
-        if True, the model parameters are the log of the psd values,
-        otherwise, model the psd values.
-
     """
 
     def __init__(self,
@@ -39,6 +17,31 @@ class Psd(FqLagBin):
                  fql: np.ndarray,
                  dt: float = None,
                  log: bool = False):
+        """Initialize a Psd instance to calculate the power spectrum.
+
+        This class defines the covariance kernel, and the calculations are done
+        in FqLagBin that Psd inherits from.
+
+        Parameters
+        ----------
+        tarr: np.ndarray
+            a numpy array giving the time axis of the light curve.
+        yarr: np.ndarray
+            a numpy array giving the count rate or flux
+        yerr: np.ndarray
+            a numpy array giving the 1-sigma measurement uncertainity
+            in the count rate or flux.
+        fql: np.ndarray
+            a numpy array of frequency bin boundaries
+        dt: float
+            sampling time of the light curves. If given, corrections to sampling
+            bias is applied, otherwise, we don't apply it.
+        log: bool
+            if True, the model parameters are the log of the psd values,
+            otherwise, model the psd values.
+
+        """
+
         # initialize the parent class #
         super().__init__(tarr, yarr, yerr, fql, dt)
         # set the norm; this ensures the psd values returned are normalized
@@ -79,22 +82,5 @@ class Psd(FqLagBin):
 
 
     def covariance_derivative(self, pars: np.ndarray):
-        """First Derivative of the covariance kernel function 
-        for modeling the power spectrum.
-
-        This calculates the derivative of covariance values with respect
-        to each model parameter
-        
-
-        Parameters
-        ----------
-        pars: np.ndarray
-            parameters that define the covariance kernel.
-
-        Returns
-        -------
-        a matrix of first derivatives with shape (npar, self.npoints, self.npoints)
-
-        """
         psd  = np.exp(pars) if self.islog else np.array(pars)*0 + 1
         return (psd * self.I_s).T * self.norm

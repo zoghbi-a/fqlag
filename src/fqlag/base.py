@@ -87,9 +87,12 @@ class FqLagBase:
 
 
     def covariance_derivative(self, pars: np.ndarray):
-        """First Derivative of the covariance kernel function
+        """First Derivative of the covariance kernel function 
+        for modeling the power spectrum.
+
+        This calculates the derivative of covariance values with respect
+        to each model parameter
         
-        This is also meant to be overloaded by child classes.
 
         Parameters
         ----------
@@ -393,7 +396,7 @@ class FqLagBase:
         if (self.likelihood_vars is None or
                 not np.all(np.isclose(pars, self.likelihood_vars[0]))):
             self.loglikelihood(pars)
-        _, cov, chol, log_like = self.likelihood_vars
+        chol = self.likelihood_vars[2]
         Ci   = alg.cho_solve(chol, np.identity(n_d))
         Ciy  = np.dot(Ci, self.yarr)
 
