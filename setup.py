@@ -2,7 +2,7 @@ from distutils.core import setup
 setup(
   name = 'fqlag', 
   packages = ['fqlag'],
-  version = '0.3.1',
+  version = '0.3.2',
   license='MIT',
   description = ('Calculating Periodogram and Time delays in the frequency domain '
                 'from unevenly-sample time series'),
