@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "fqlag"
+dynamic = ["version"]
+description = "Calculating Periodogram and Time delays in the frequency domain from unevenly-sample time series"
+readme = "README.md"
+license = { file = "LICENSE.txt" }
+authors = [
+	{ name = "Abdu Zoghbi", email = "astrozoghbi@gmail.com" }
+]
+requires-python = ">=3.8"
+dependencies = [
+	"scipy"
+]
+keywords = ["Astronomy", "Time-Series", "Delays"]
+
+[project.urls]
+Homepage = "https://github.com/zoghbi-a/fqlag"
+Download = "https://github.com/zoghbi-a/fqlag/archive/v0.3.1.tar.gz"
+
+[tool.hatch.version]
+path = "fqlag/__init__.py"
+
+[project.optional-dependencies]
+test = [
+	"numdifftools"
+]

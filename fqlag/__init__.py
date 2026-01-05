@@ -9,3 +9,5 @@ from .multi import multiFqLagBin
 
 __all__ = ['Psd', 'Cxd', 'lCxd', 'CxdRI', 'PCxd', 'PPsi', 
             'Psi', 'Psdf', 'multiFqLagBin']
+
+__version__ = '0.3.5'
