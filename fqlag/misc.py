@@ -1,39 +1,6 @@
 import numpy as np
-from scipy.misc import derivative
 import scipy.optimize as opt
 import scipy.stats as st
-
-
-def check_grad(mod, p0, dx=1e-3):
-    """Compare the gradient from mod.loglikelihood_derivative
-    against numerical derivative.
-
-    Tests that the derivatie codes are correct
-
-    Args:
-        mod: the model we are testing
-        p0: parameters of the model
-        dx: used for the numerical derivative
-
-    Returns:
-        logLikelihood, grad_array_analytic, grad_array_numerical
-    """
-
-    p0 = np.array(p0)
-    l,g,h = mod.loglikelihood_derivative(p0)
-    
-    g0 = []
-    for i in range(len(p0)):
-        def f(x, p0):
-            p0[i] = x
-            return mod.loglikelihood(p0)
-        g0.append(derivative(f, p0[i], dx, args=(np.array(p0), )))
-    g0 = np.array(g0)
-    
-    print('analytic:  ', ' '.join(['%10.4g'%x for x in g]))
-    print('numerical: ', ' '.join(['%10.4g'%x for x in g0]))
-    return l, g, g0
-
 
 def run_mcmc(mod, p0, perr=None, nwalkers=-10, nrun=100, **kwargs):
     """Run MCMC to estimate the Posterior distributions of the parameters

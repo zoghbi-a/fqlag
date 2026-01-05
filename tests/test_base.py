@@ -3,7 +3,7 @@ import unittest
 import sys
 import os
 
-from scipy.misc import derivative
+import numdifftools as nd
 
 
 sys.path.insert(0, os.path.abspath(
@@ -48,6 +48,7 @@ class TestFqLagBase(unittest.TestCase):
 
         p0 = np.array(p0)
         l,g = mod.loglikelihood_derivative(p0, calc_fisher=False)
+
         
         dx = 1e-7
         g0 = []
@@ -55,7 +56,8 @@ class TestFqLagBase(unittest.TestCase):
             def f(x, pp0):
                 pp0[i] = x
                 return mod.loglikelihood(pp0)
-            g0.append(derivative(f, p0[i], dx, args=(np.array(p0), )))
+            derivative = nd.Derivative(f, n=1, step=dx)
+            g0.append(derivative(p0[i], np.array(p0)))
         g0 = np.array(g0)
 
         self.assertAlmostEqual(g0[0], grad[0], 3)
