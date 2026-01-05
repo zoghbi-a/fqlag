@@ -6,7 +6,6 @@ Both libraries implement the method presented in Zoghbi et. al. (2013) paper ([A
 
 ## Installation
 - pip install fqlag
-- OR [Download](https://github.com/zoghbi-a/fqlag/archive/master.zip)  and add the directory `fqlag/flag` to PYTHONPATH or put it somewhere where python can find it.
 
 
 ## Getting Started
